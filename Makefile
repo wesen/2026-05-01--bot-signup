@@ -1,4 +1,4 @@
-.PHONY: dev-backend dev-frontend storybook storybook-build frontend-check test build
+.PHONY: dev-backend dev-frontend storybook storybook-build frontend-check test build-web build
 
 dev-backend:
 	go run ./cmd/bot-signup serve --addr :8080
@@ -19,5 +19,8 @@ frontend-check:
 test:
 	go test ./...
 
-build: frontend-check storybook-build
-	go build -o bin/bot-signup ./cmd/bot-signup
+build-web:
+	go run ./cmd/build-web
+
+build: frontend-check storybook-build build-web
+	go build -tags embed -o bin/bot-signup ./cmd/bot-signup

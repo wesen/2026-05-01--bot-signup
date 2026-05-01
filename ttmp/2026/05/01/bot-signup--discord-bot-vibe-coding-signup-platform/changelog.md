@@ -49,3 +49,8 @@ Implemented Phase 8 admin pages: admin route guard, stats cards, waitlist table,
 
 Implemented Phase 9 tutorial page: copied discord-bot tutorial markdown into ui/src/content, rendered it with react-markdown/remark-gfm, added markdown styling and TutorialPage Storybook story, and validated lint/build/storybook/tests.
 
+
+## 2026-05-01
+
+Implemented Phase 10/11 build and delivery polish: Dagger-backed cmd/build-web with pnpm cache, internal/web go:embed SPA serving, Makefile build-web/build targets, GitHub Actions CI, README, packageManager pin, and validated make build with Dagger exporting assets before embedded Go build.
+

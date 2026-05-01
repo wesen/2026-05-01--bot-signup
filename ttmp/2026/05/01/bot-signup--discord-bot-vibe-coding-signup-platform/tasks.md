@@ -11,8 +11,8 @@
 - [x] Phase 7: User pages (profile + waiting list + credential display + stories)
 - [x] Phase 8: Admin pages (dashboard + approval form + stories)
 - [x] Phase 9: Tutorial page (embedded markdown from discord-bot)
-- [ ] Phase 10: Frontend embedding (go:embed + single-binary build)
-- [ ] Phase 11: Polish and deploy (error handling, CI, Storybook build)
+- [x] Phase 10: Frontend embedding (go:embed + single-binary build)
+- [x] Phase 11: Polish and deploy (error handling, CI, Storybook build)
 
 ## Done
 

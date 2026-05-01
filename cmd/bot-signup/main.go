@@ -9,6 +9,7 @@ import (
 
 	"github.com/go-go-golems/bot-signup/internal/database"
 	"github.com/go-go-golems/bot-signup/internal/server"
+	"github.com/go-go-golems/bot-signup/internal/web"
 	"github.com/spf13/cobra"
 )
 
@@ -70,6 +71,13 @@ func runServe(addr string) error {
 		DiscordRedirectURL:  discordRedirectURL,
 	})
 	srv.RegisterRoutes(mux)
+	spaHandler, err := web.NewSPAHandler(&web.SPAOptions{APIPrefixes: []string{"/api", "/auth"}})
+	if err != nil {
+		log.Printf("SPA assets unavailable: %v", err)
+	} else {
+		mux.Handle("GET /", spaHandler)
+		mux.Handle("GET /{filepath...}", spaHandler)
+	}
 
 	log.Printf("bot-signup server listening on %s", addr)
 	return http.ListenAndServe(addr, mux)

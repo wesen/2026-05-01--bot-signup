@@ -8,6 +8,7 @@ coverage.out
 !/data/.gitkeep
 .env
 .env.*
+.envrc
 
 # Frontend (future phases)
 ui/node_modules/

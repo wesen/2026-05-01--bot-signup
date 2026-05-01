@@ -526,3 +526,58 @@ go test ./...
 
 1. Commit Phase 9.
 2. Implement Phase 10/11 with Dagger build-web, go:embed SPA serving, and CI/polish targets.
+
+## 2026-05-01 — Phase 10/11 Dagger build, embed, CI, and polish
+
+### What was done
+
+1. Added Dagger SDK dependency and `cmd/build-web`.
+2. Pinned `ui/package.json` `packageManager` to `pnpm@10.15.1`.
+3. Implemented Dagger-first web build pipeline:
+   - mounts `ui/` into a `node:22-bookworm` container,
+   - uses `corepack prepare pnpm@10.15.1`,
+   - runs `pnpm install --frozen-lockfile --prefer-offline`,
+   - runs `pnpm run build`,
+   - exports `ui/dist` to `internal/web/embed/public`.
+4. Added local fallback with `BUILD_WEB_LOCAL=1 go run ./cmd/build-web`.
+5. Added `internal/web` package:
+   - `embed.go` for `//go:embed embed/public`,
+   - `embed_none.go` for disk fallback,
+   - `static.go` for SPA fallback serving while preserving `/api` and `/auth`,
+   - `generate.go` for `go generate ./internal/web`.
+6. Wired SPA serving into `cmd/bot-signup/main.go` after backend route registration.
+7. Updated Makefile targets:
+   - `build-web`,
+   - `build` now runs frontend checks, Storybook build, Dagger build-web, and `go build -tags embed`.
+8. Added GitHub Actions CI for Go tests, frontend lint/build, Storybook build, and local embedded single-binary build.
+9. Added root `README.md` with dev, OAuth, Storybook, and Dagger build instructions.
+10. Added `.envrc` to `.gitignore` after a local direnv file appeared.
+
+### Commands run
+
+```bash
+go get dagger.io/dagger@latest
+pnpm --dir ui install --lockfile-only
+gofmt -w cmd/build-web/main.go cmd/bot-signup/main.go internal/web/*.go
+go test ./...
+go run ./cmd/build-web          # Dagger path, succeeded and exported assets
+make build                      # lint, UI build, Storybook build, Dagger build-web, go build -tags embed
+find internal/web/embed/public -mindepth 1 ! -name .keep -exec rm -rf {} +
+rm -rf ui/dist ui/storybook-static bin
+```
+
+### What worked
+
+- Dagger engine was available and built/exported the frontend assets successfully.
+- `make build` completed successfully, including the embedded Go binary build.
+- Generated frontend artifacts were removed before commit; `cmd/build-web` regenerates them for release/CI builds.
+
+### What was tricky
+
+- We intentionally do not commit generated Vite assets under `internal/web/embed/public`; the build target generates them before the `embed` build. A `.keep` file preserves the directory for `//go:embed` hygiene.
+- A separate untracked deployment ticket directory appeared under `ttmp/2026/05/01/BOT-SIGNUP-K3S-DEPLOY...`; I left it untouched because it is unrelated to this implementation sequence.
+
+### Next steps
+
+1. Commit Phase 10/11.
+2. Optionally run an end-to-end browser smoke against the embedded binary.

@@ -1,0 +1,46 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test-build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - uses: pnpm/action-setup@v4
+        with:
+          package_json_file: ui/package.json
+          run_install: false
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: ui/pnpm-lock.yaml
+
+      - name: Install UI dependencies
+        run: pnpm --dir ui install --frozen-lockfile
+
+      - name: Go tests
+        run: go test ./...
+
+      - name: Frontend lint
+        run: pnpm --dir ui lint
+
+      - name: Frontend build
+        run: pnpm --dir ui build
+
+      - name: Storybook build
+        run: pnpm --dir ui build-storybook
+
+      - name: Single-binary build with embedded UI
+        run: BUILD_WEB_LOCAL=1 make build
