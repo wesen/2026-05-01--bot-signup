@@ -6,8 +6,8 @@
 - [x] Phase 2: Database layer (SQLite + migrations + CRUD tests)
 - [x] Phase 3R: Replace password/JWT auth with Discord OAuth + HTTP-only sessions
 - [x] Phase 4R: Adjust profile/admin handlers to use session middleware and OAuth-created users
-- [ ] Phase 5: Frontend scaffolding (Vite + React + Tailwind + Storybook + RTK Query)
-- [ ] Phase 6: OAuth landing/signup card (VibeBot Sessions visual reference + Storybook stories)
+- [x] Phase 5: Frontend scaffolding (Vite + React + Tailwind + Storybook + RTK Query)
+- [x] Phase 6: OAuth landing/signup card (VibeBot Sessions visual reference + Storybook stories)
 - [ ] Phase 7: User pages (profile + waiting list + credential display + stories)
 - [ ] Phase 8: Admin pages (dashboard + approval form + stories)
 - [ ] Phase 9: Tutorial page (embedded markdown from discord-bot)

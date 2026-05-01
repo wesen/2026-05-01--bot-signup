@@ -331,3 +331,61 @@ rg -n "CreateUser|HashPassword|CheckPassword|jwtSecret|AuthMiddleware|bcrypt|pas
 
 1. Commit Phase 3R/4R.
 2. Start Phase 5 frontend scaffolding and build the VibeBot Sessions landing UI to match the stored reference image.
+
+## 2026-05-01 — Phase 5/6 frontend scaffold and VibeBot landing page
+
+### What was done
+
+1. Created `ui/` with Vite + React + TypeScript.
+2. Added Tailwind v4 through `@tailwindcss/vite`.
+3. Added React Router, Redux Toolkit, React Redux, RTK Query, react-markdown, remark-gfm, and lucide-react.
+4. Added Storybook 10 with the Vite framework and docs/a11y addons.
+5. Added RTK Query `apiSlice` with same-origin cookie credentials and initial endpoints:
+   - `getMe`,
+   - `logout`,
+   - `getStats`.
+6. Added Redux store and AuthProvider for Discord OAuth navigation + session-cookie auth.
+7. Built the VibeBot Sessions landing page to match the reference image:
+   - off-white/purple SaaS background,
+   - logo/nav with About/FAQ/Sign Up,
+   - two-column hero,
+   - right-side signup card,
+   - "Continue with Discord" CTA,
+   - three "What you get" feature cards.
+8. Added Storybook stories for:
+   - `DiscordOAuthButton`,
+   - `SessionSignupCard`,
+   - `FeatureCard`.
+9. Added Makefile targets for frontend dev, Storybook, Storybook build, and frontend checks.
+
+### Commands run
+
+```bash
+pnpm create vite ui --template react-ts
+pnpm --dir ui install
+pnpm --dir ui add react-router-dom react-markdown remark-gfm @reduxjs/toolkit react-redux lucide-react
+pnpm --dir ui add -D tailwindcss @tailwindcss/vite storybook @storybook/react-vite @storybook/addon-docs @storybook/addon-a11y
+pnpm --dir ui lint
+pnpm --dir ui build
+pnpm --dir ui build-storybook
+rm -rf ui/dist ui/storybook-static
+go test ./...
+```
+
+### What worked
+
+- `pnpm --dir ui lint` passes.
+- `pnpm --dir ui build` passes.
+- `pnpm --dir ui build-storybook` passes.
+- `go test ./...` still passes.
+
+### What was tricky
+
+- Storybook 10 does not have a matching `@storybook/test` version; I removed `@storybook/test` and kept static Storybook stories for now.
+- Storybook build output and Vite dist output must be deleted before commit and are already ignored by `.gitignore`.
+- React Fast Refresh required moving `AuthContext` exports into a separate `context.ts` file.
+
+### Next steps
+
+1. Commit Phase 5/6 frontend scaffold.
+2. Start Phase 7 user pages: waiting list, profile, credential cards, route protection.
