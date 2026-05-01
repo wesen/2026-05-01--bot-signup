@@ -117,12 +117,20 @@ export const apiSlice = createApi({
       query: ({ id, ...body }) => ({ url: `/admin/users/${id}/approve`, method: 'POST', body }),
       invalidatesTags: ['User', 'Stats'],
     }),
+    updateCredentials: builder.mutation<{ message: string }, ApproveUserRequest>({
+      query: ({ id, ...body }) => ({ url: `/admin/users/${id}/credentials`, method: 'PUT', body }),
+      invalidatesTags: ['User', 'Stats'],
+    }),
     rejectUser: builder.mutation<{ message: string }, number>({
       query: (id) => ({ url: `/admin/users/${id}/reject`, method: 'POST' }),
       invalidatesTags: ['User', 'Stats'],
     }),
     disableUser: builder.mutation<{ message: string }, number>({
       query: (id) => ({ url: `/admin/users/${id}/disable`, method: 'POST' }),
+      invalidatesTags: ['User', 'Stats'],
+    }),
+    enableUser: builder.mutation<{ message: string }, number>({
+      query: (id) => ({ url: `/admin/users/${id}/enable`, method: 'POST' }),
       invalidatesTags: ['User', 'Stats'],
     }),
     suspendUser: builder.mutation<{ message: string }, number>({
@@ -145,8 +153,10 @@ export const {
   useGetWaitlistQuery,
   useGetAdminUsersQuery,
   useApproveUserMutation,
+  useUpdateCredentialsMutation,
   useRejectUserMutation,
   useDisableUserMutation,
+  useEnableUserMutation,
   useSuspendUserMutation,
   useDeleteUserMutation,
 } = apiSlice

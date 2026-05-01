@@ -2,7 +2,7 @@ import { ArrowLeft } from 'lucide-react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { ApprovalForm, type ApprovalFormValues } from '../../components/ApprovalForm'
 import { StatusBadge } from '../../components/StatusBadge'
-import { useApproveUserMutation, useGetAdminUsersQuery } from '../../store/api'
+import { useApproveUserMutation, useGetAdminUsersQuery, useUpdateCredentialsMutation } from '../../store/api'
 
 export function AdminUserDetail() {
   const { id } = useParams()
@@ -10,10 +10,15 @@ export function AdminUserDetail() {
   const numericID = Number(id)
   const { data, isLoading } = useGetAdminUsersQuery({ page: 1, per_page: 200 })
   const [approveUser, { isLoading: isApproving }] = useApproveUserMutation()
+  const [updateCredentials, { isLoading: isUpdatingCredentials }] = useUpdateCredentialsMutation()
   const user = data?.users.find((candidate) => candidate.id === numericID)
 
-  const approve = async (values: ApprovalFormValues) => {
-    await approveUser({ id: numericID, ...values }).unwrap()
+  const saveCredentials = async (values: ApprovalFormValues) => {
+    if (user?.status === 'waiting') {
+      await approveUser({ id: numericID, ...values }).unwrap()
+    } else {
+      await updateCredentials({ id: numericID, ...values }).unwrap()
+    }
     navigate('/admin')
   }
 
@@ -50,7 +55,14 @@ export function AdminUserDetail() {
               <p className="text-slate-500">User not found.</p>
             )}
           </section>
-          {user && <ApprovalForm onSubmit={approve} isSubmitting={isApproving} />}
+          {user && (
+            <ApprovalForm
+              onSubmit={saveCredentials}
+              isSubmitting={isApproving || isUpdatingCredentials}
+              submitLabel={user.status === 'waiting' ? 'Approve User' : 'Update Credentials'}
+              submittingLabel={user.status === 'waiting' ? 'Approving…' : 'Updating…'}
+            />
+          )}
         </div>
       </section>
     </main>

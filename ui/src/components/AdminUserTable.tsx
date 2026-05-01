@@ -7,10 +7,11 @@ interface AdminUserTableProps {
   users: User[]
   onReject?: (id: number) => void
   onDisable?: (id: number) => void
+  onEnable?: (id: number) => void
   isBusy?: boolean
 }
 
-export function AdminUserTable({ users, onReject, onDisable, isBusy = false }: AdminUserTableProps) {
+export function AdminUserTable({ users, onReject, onDisable, onEnable, isBusy = false }: AdminUserTableProps) {
   if (users.length === 0) {
     return (
       <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-8 text-center text-slate-500">
@@ -57,6 +58,16 @@ export function AdminUserTable({ users, onReject, onDisable, isBusy = false }: A
                       className="inline-flex items-center gap-1 rounded-lg border border-slate-200 px-3 py-2 text-xs font-bold text-slate-600 hover:text-rose-600 disabled:opacity-50"
                     >
                       <XCircle className="h-4 w-4" /> Reject
+                    </button>
+                  )}
+                  {onEnable && user.status !== 'approved' && user.status !== 'waiting' && (
+                    <button
+                      type="button"
+                      disabled={isBusy}
+                      onClick={() => onEnable(user.id)}
+                      className="inline-flex items-center gap-1 rounded-lg border border-emerald-200 px-3 py-2 text-xs font-bold text-emerald-700 hover:bg-emerald-50 disabled:opacity-50"
+                    >
+                      <CheckCircle2 className="h-4 w-4" /> Enable
                     </button>
                   )}
                   {onDisable && user.status !== 'suspended' && (

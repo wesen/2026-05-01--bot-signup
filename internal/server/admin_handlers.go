@@ -95,6 +95,10 @@ func (s *Server) handleSuspendUser(w http.ResponseWriter, r *http.Request) {
 	s.setUserStatus(w, r, database.UserStatusSuspended, "User disabled")
 }
 
+func (s *Server) handleEnableUser(w http.ResponseWriter, r *http.Request) {
+	s.setUserStatus(w, r, database.UserStatusApproved, "User enabled")
+}
+
 func (s *Server) handleUpdateCredentials(w http.ResponseWriter, r *http.Request) {
 	userID, ok := pathID(w, r)
 	if !ok {

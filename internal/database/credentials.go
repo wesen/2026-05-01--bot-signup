@@ -35,14 +35,29 @@ func (db *DB) GetCredentialsByUserID(ctx context.Context, userID int64) (*BotCre
 }
 
 func (db *DB) UpdateBotCredentials(ctx context.Context, creds *BotCredentials) error {
-	res, err := db.db.ExecContext(ctx, `
+	tx, err := db.db.BeginTx(ctx, nil)
+	if err != nil {
+		return fmt.Errorf("begin credential update transaction: %w", err)
+	}
+	defer tx.Rollback()
+
+	res, err := tx.ExecContext(ctx, `
 		UPDATE bot_credentials
 		SET application_id = ?, bot_token = ?, guild_id = ?, public_key = ?, updated_at = datetime('now')
 		WHERE user_id = ?`, creds.ApplicationID, creds.BotToken, creds.GuildID, creds.PublicKey, creds.UserID)
 	if err != nil {
 		return fmt.Errorf("update bot credentials: %w", err)
 	}
-	return requireAffected(res)
+	if err := requireAffected(res); err != nil {
+		return err
+	}
+	if _, err := tx.ExecContext(ctx, `UPDATE users SET status = 'approved', updated_at = datetime('now') WHERE id = ?`, creds.UserID); err != nil {
+		return fmt.Errorf("approve user after credential update: %w", err)
+	}
+	if err := tx.Commit(); err != nil {
+		return fmt.Errorf("commit credential update transaction: %w", err)
+	}
+	return nil
 }
 
 func scanCredentials(row *sql.Row) (*BotCredentials, error) {

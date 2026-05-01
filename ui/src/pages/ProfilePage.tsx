@@ -1,4 +1,5 @@
-import { ArrowLeft, BookOpen, LogOut, ShieldCheck } from 'lucide-react'
+import { useMemo, useState } from 'react'
+import { ArrowLeft, BookOpen, Check, Copy, LogOut, ShieldCheck } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../auth/useAuth'
 import { CredentialTable } from '../components/CredentialTable'
@@ -10,6 +11,8 @@ import { discordBotInviteURL, useGetProfileQuery } from '../store/api'
 export function ProfilePage() {
   const { logout } = useAuth()
   const { data, isLoading, error } = useGetProfileQuery()
+  const credentials = data?.bot_credentials ?? null
+  const inviteURL = useMemo(() => credentials ? discordBotInviteURL(credentials.application_id) : '', [credentials])
 
   if (isLoading) {
     return <ProfileShell title="Loading your bot profile..." />
@@ -18,7 +21,7 @@ export function ProfilePage() {
     return <ProfileShell title="Could not load profile" message="Refresh the page or sign in again." />
   }
 
-  const { user, bot_credentials: credentials } = data
+  const { user } = data
 
   return (
     <main className="min-h-screen bg-[radial-gradient(circle_at_top_left,_rgba(88,101,242,0.14),_transparent_35%),#fbfbff] px-6 py-10">
@@ -57,14 +60,7 @@ export function ProfilePage() {
             <div className="mt-8">
               <h2 className="text-2xl font-black text-slate-950">Bot credentials</h2>
               <p className="mt-2 text-sm text-slate-500">Keep these secret. Never paste your bot token into public chat or commits.</p>
-              <a
-                className="mt-4 inline-flex rounded-xl bg-[#5865F2] px-4 py-2 text-sm font-bold text-white shadow-sm transition hover:bg-[#4752C4]"
-                href={discordBotInviteURL(credentials.application_id)}
-                target="_blank"
-                rel="noreferrer"
-              >
-                Request server access / invite bot
-              </a>
+              <InviteLinkCard inviteURL={inviteURL} />
               <div className="mt-5">
                 <CredentialTable credentials={credentials} />
               </div>
@@ -96,6 +92,46 @@ export function ProfilePage() {
         </div>
       </section>
     </main>
+  )
+}
+
+function InviteLinkCard({ inviteURL }: { inviteURL: string }) {
+  const [copied, setCopied] = useState(false)
+
+  const copyInviteURL = async () => {
+    await navigator.clipboard.writeText(inviteURL)
+    setCopied(true)
+    window.setTimeout(() => setCopied(false), 1500)
+  }
+
+  return (
+    <div className="mt-5 rounded-2xl border border-indigo-100 bg-indigo-50/60 p-4">
+      <h3 className="text-sm font-black uppercase tracking-[0.18em] text-[#5865F2]">Server invite link</h3>
+      <p className="mt-2 text-sm leading-6 text-slate-600">
+        Send this link to a server admin so they can add your bot to the Discord server. Only a Discord server admin can complete the invite.
+      </p>
+      <div className="mt-3 flex flex-col gap-3 sm:flex-row">
+        <a
+          className="inline-flex items-center justify-center rounded-xl bg-[#5865F2] px-4 py-2 text-sm font-bold text-white shadow-sm transition hover:bg-[#4752C4]"
+          href={inviteURL}
+          target="_blank"
+          rel="noreferrer"
+        >
+          Request server access / invite bot
+        </a>
+        <button
+          type="button"
+          onClick={() => void copyInviteURL()}
+          className="inline-flex items-center justify-center gap-2 rounded-xl border border-indigo-200 bg-white px-4 py-2 text-sm font-bold text-[#5865F2] hover:bg-indigo-50"
+        >
+          {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+          {copied ? 'Copied invite link' : 'Copy invite link'}
+        </button>
+      </div>
+      <code className="mt-3 block overflow-hidden text-ellipsis whitespace-nowrap rounded-xl bg-white px-3 py-2 font-mono text-xs text-slate-600">
+        {inviteURL}
+      </code>
+    </div>
   )
 }
 

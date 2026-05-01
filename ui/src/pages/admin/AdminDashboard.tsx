@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom'
 import { useAuth } from '../../auth/useAuth'
 import { AdminStats } from '../../components/AdminStats'
 import { AdminUserTable } from '../../components/AdminUserTable'
-import { useDisableUserMutation, useGetAdminUsersQuery, useGetStatsQuery, useGetWaitlistQuery, useRejectUserMutation } from '../../store/api'
+import { useDisableUserMutation, useEnableUserMutation, useGetAdminUsersQuery, useGetStatsQuery, useGetWaitlistQuery, useRejectUserMutation } from '../../store/api'
 
 export function AdminDashboard() {
   const { logout } = useAuth()
@@ -12,6 +12,7 @@ export function AdminDashboard() {
   const { data: allUsers, isLoading: isLoadingUsers, refetch: refetchUsers } = useGetAdminUsersQuery({ page: 1, per_page: 200 })
   const [rejectUser, { isLoading: isRejecting }] = useRejectUserMutation()
   const [disableUser, { isLoading: isDisabling }] = useDisableUserMutation()
+  const [enableUser, { isLoading: isEnabling }] = useEnableUserMutation()
 
   const refresh = () => {
     void refetchStats()
@@ -27,6 +28,11 @@ export function AdminDashboard() {
   const disable = async (id: number) => {
     if (!window.confirm('Disable this user? They will no longer have active access.')) return
     await disableUser(id).unwrap()
+  }
+
+  const enable = async (id: number) => {
+    if (!window.confirm('Enable this user? Their existing credentials will remain unchanged.')) return
+    await enableUser(id).unwrap()
   }
 
   return (
@@ -82,7 +88,7 @@ export function AdminDashboard() {
           {isLoadingUsers ? (
             <div className="rounded-2xl bg-slate-50 p-8 text-center text-slate-500">Loading users…</div>
           ) : (
-            <AdminUserTable users={allUsers?.users ?? []} onDisable={disable} isBusy={isDisabling} />
+            <AdminUserTable users={allUsers?.users ?? []} onDisable={disable} onEnable={enable} isBusy={isDisabling || isEnabling} />
           )}
         </section>
       </section>
