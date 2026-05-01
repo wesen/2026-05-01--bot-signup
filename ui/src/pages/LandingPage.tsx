@@ -27,6 +27,22 @@ export function LandingPage() {
           <Link className="hidden hover:text-[#5865F2] sm:inline" to="/tutorial">
             Docs
           </Link>
+          {user ? (
+            <Link
+              to={user.role === 'admin' ? '/admin' : user.status === 'approved' ? '/profile' : '/waiting-list'}
+              className="rounded-xl bg-[#5865F2] px-4 py-2 font-semibold text-white shadow-sm transition hover:bg-[#4752C4]"
+            >
+              {user.role === 'admin' ? 'Admin' : 'Status'}
+            </Link>
+          ) : (
+            <button
+              type="button"
+              onClick={startDiscord}
+              className="rounded-xl bg-[#5865F2] px-4 py-2 font-semibold text-white shadow-sm transition hover:bg-[#4752C4]"
+            >
+              Sign Up
+            </button>
+          )}
         </div>
       </nav>
 
