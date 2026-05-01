@@ -1,0 +1,20 @@
+# Go
+/bin/
+*.test
+coverage.out
+
+# Local runtime data
+/data/*
+!/data/.gitkeep
+.env
+.env.*
+
+# Frontend (future phases)
+ui/node_modules/
+ui/dist/
+ui/storybook-static/
+
+# OS/editor
+.DS_Store
+.idea/
+.vscode/
