@@ -2,19 +2,22 @@ package server
 
 import (
 	"net/http"
+
+	"github.com/go-go-golems/bot-signup/internal/database"
 )
 
 // Server owns the HTTP handlers for the bot signup application.
 type Server struct {
+	db      *database.DB
 	version string
 }
 
 // New constructs a Server with production-safe defaults.
-func New(version string) *Server {
+func New(db *database.DB, version string) *Server {
 	if version == "" {
 		version = "dev"
 	}
-	return &Server{version: version}
+	return &Server{db: db, version: version}
 }
 
 // RegisterRoutes registers public API routes. The SPA fallback will be added

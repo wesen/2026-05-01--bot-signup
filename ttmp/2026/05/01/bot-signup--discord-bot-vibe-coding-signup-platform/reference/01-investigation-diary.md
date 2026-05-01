@@ -96,3 +96,42 @@ go test ./...
 
 1. Commit Phase 1 scaffold.
 2. Start Phase 2 database layer.
+
+## 2026-05-01 — Phase 2 implementation
+
+### What was done
+
+1. Added `modernc.org/sqlite` as the pure-Go SQLite driver.
+2. Added `internal/database` with:
+   - `database.go` for opening SQLite, configuring pragmas, and running embedded migrations
+   - `models.go` for `User` and `BotCredentials`
+   - `users.go` for user CRUD and list-by-status
+   - `credentials.go` for Discord bot credential CRUD
+   - `migrations/001_initial.sql` for `users`, `bot_credentials`, and `schema_migrations`
+3. Wired server startup to open the SQLite database and run migrations before serving HTTP.
+4. Added tests for migrations, user CRUD, uniqueness constraints, and credential CRUD/cascade delete.
+
+### Commands run
+
+```bash
+go get modernc.org/sqlite@latest
+gofmt -w internal/database/*.go cmd/bot-signup/main.go internal/server/*.go
+go mod tidy
+go test ./...
+```
+
+### What worked
+
+- `go test ./...` passes.
+- Migrations are embedded and recorded in `schema_migrations`.
+- SQLite foreign keys are enabled, so deleting a user cascades to credentials.
+
+### What was tricky
+
+- The migration runner creates `schema_migrations` before applying embedded migrations so it can track the first migration cleanly.
+- Runtime database files are ignored by `.gitignore`; only `data/.gitkeep` is committed.
+
+### Next steps
+
+1. Commit Phase 2 database layer.
+2. Start Phase 3 authentication (bcrypt, JWT, signup/login handlers).

@@ -3,7 +3,7 @@
 ## TODO
 
 - [x] Phase 1: Project scaffolding (Go server + health endpoint)
-- [ ] Phase 2: Database layer (SQLite + migrations + CRUD tests)
+- [x] Phase 2: Database layer (SQLite + migrations + CRUD tests)
 - [ ] Phase 3: Authentication (bcrypt + JWT + signup/login endpoints)
 - [ ] Phase 4: Profile and admin handlers (all remaining API endpoints)
 - [ ] Phase 5: Frontend scaffolding (Vite + React + Tailwind + Storybook + RTK Query)
