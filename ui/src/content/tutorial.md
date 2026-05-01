@@ -31,13 +31,14 @@ SectionType: Tutorial
 
 This guide shows the full day-one path for a new bot developer:
 
-1. discover the repository layout
-2. inspect existing bots with `bots list` and `bots help`
-3. create a new JavaScript bot
-4. add commands, events, buttons, modals, and autocomplete
-5. add runtime config fields when a bot needs them
-6. run the bot through the named-bot CLI path
-7. test the bot in Discord without guessing
+1. clone or install `https://github.com/go-go-golems/discord-bot`
+2. discover the repository layout
+3. inspect existing bots with `bots list` and `bots help`
+4. create a new JavaScript bot
+5. add commands, events, buttons, modals, and autocomplete
+6. add runtime config fields when a bot needs them
+7. run the bot through the named-bot CLI path
+8. test the bot in Discord without guessing
 
 The goal is practical fluency. By the end, you should be able to build a complete bot from scratch, run it locally, and know where to look when something fails.
 
@@ -53,7 +54,22 @@ The goal is practical fluency. By the end, you should be able to build a complet
 2. The Go host loads your script, syncs slash commands to Discord, opens the gateway, and dispatches events.
 3. Your script uses `ctx.discord.*` to call Discord APIs; the host handles authentication, rate limits, and reconnections.
 
-## 1. Understand the repository layout
+## 1. Clone or install the Discord bot runner
+
+Start by getting the bot runner project:
+
+```bash
+git clone https://github.com/go-go-golems/discord-bot.git
+cd discord-bot
+```
+
+If you do not want a local checkout, install the CLI using the instructions in the repository instead:
+
+[https://github.com/go-go-golems/discord-bot](https://github.com/go-go-golems/discord-bot)
+
+This matters because the signup site only gives you Discord credentials. The `discord-bot` repository contains the runner, examples, JavaScript bot APIs, and CLI commands used in the rest of this tutorial.
+
+## 2. Understand the repository layout
 
 Bots in this repo are not individual ad hoc scripts. They are named bot implementations under `examples/discord-bots/`.
 
@@ -81,7 +97,7 @@ The existing examples are good starting points:
 - `support/` — deferred replies and follow-ups
 - `moderation/` — message-triggered workflows
 
-## 2. Discover what is already there
+## 3. Discover what is already there
 
 Start every new bot by looking at the current repository inventory.
 
@@ -99,7 +115,7 @@ go run ./cmd/discord-bot bots --bot-repository ./examples/discord-bots help ping
 
 That command shows the bot’s description, slash commands, events, and any runtime config fields.
 
-## 3. Create a minimal bot first
+## 4. Create a minimal bot first
 
 The easiest way to succeed is to start with one command and one event.
 
@@ -135,7 +151,7 @@ module.exports = defineBot(({ command, event, configure }) => {
 
 Once this works, you can grow the bot safely.
 
-## 4. Add one slow command the right way
+## 5. Add one slow command the right way
 
 When a command needs to do work after submission, do not block without acknowledging the interaction. Use the defer/edit pattern.
 
@@ -188,7 +204,7 @@ autocomplete("search", "query", async (ctx) => {
 
 That gives the user suggestions while typing, then a deferred result after submission.
 
-## 5. Add buttons and select menus
+## 6. Add buttons and select menus
 
 Buttons and select menus use the `component(...)` registration helper.
 
@@ -249,7 +265,7 @@ A good mental model is:
 - command response renders the UI
 - component handlers respond to clicks or selections
 
-## 6. Add a modal workflow
+## 7. Add a modal workflow
 
 Modals are great when you need more than a single slash-command field.
 
@@ -303,7 +319,7 @@ modal("feedback:submit", async (ctx) => {
 
 Use a modal when you want a structured form with multiple text inputs. It is much better than stuffing long text into a single slash-command option.
 
-## 7. Add runtime config when the bot needs operator input
+## 8. Add runtime config when the bot needs operator input
 
 Some bots need a few values at startup, but those values are not Discord command arguments. Use `configure({ run: { fields: ... }})`.
 
@@ -347,7 +363,7 @@ For example:
 - `index_path` becomes `--index-path`
 - `read_only` becomes `--read-only`
 
-## 8. Run the bot through the named-bot CLI path
+## 9. Run the bot through the named-bot CLI path
 
 The normal workflow in this repository is:
 
@@ -377,7 +393,7 @@ go run ./cmd/discord-bot bots --bot-repository ./examples/discord-bots knowledge
   --sync-on-start
 ```
 
-## 9. Inspect parsed values before you run
+## 10. Inspect parsed values before you run
 
 If something behaves strangely, print the resolved bot and runtime config before opening Discord:
 
@@ -395,7 +411,7 @@ This is useful when you want to confirm:
 - which secrets are present
 - whether your bot help text is surfacing the fields you expect
 
-## 10. Test in Discord with a small checklist
+## 11. Test in Discord with a small checklist
 
 Once the bot is running and synced, test the behavior in this order:
 
@@ -412,7 +428,7 @@ For the sample bots in this repo, the most useful smoke tests are:
 - `poker` — help flow, game state, rank evaluation, and action advice
 - `knowledge-base` — runtime config plus docs search
 
-## 11. Organize a real bot beyond the first commit
+## 12. Organize a real bot beyond the first commit
 
 Once the minimal bot works, split it into clear pieces.
 
@@ -435,7 +451,7 @@ A good bot file usually contains:
 - component/modals/autocomplete registrations if needed
 - a single place where help text and example commands live
 
-## 12. Troubleshoot the common failures
+## 13. Troubleshoot the common failures
 
 | Problem | Likely cause | Fix |
 | --- | --- | --- |
@@ -449,7 +465,7 @@ A good bot file usually contains:
 | `ctx.defer` does nothing useful | The handler deferred but never edited or followed up | Call `ctx.edit(...)` or `ctx.followUp(...)` after the work finishes |
 | Discord permission errors | The bot token lacks permission in the guild or channel | Check bot permissions and channel access |
 
-## 13. Use the examples as living templates
+## 14. Use the examples as living templates
 
 The best starting points in this repository are:
 
