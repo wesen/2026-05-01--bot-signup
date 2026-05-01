@@ -54,3 +54,8 @@ Implemented Phase 9 tutorial page: copied discord-bot tutorial markdown into ui/
 
 Implemented Phase 10/11 build and delivery polish: Dagger-backed cmd/build-web with pnpm cache, internal/web go:embed SPA serving, Makefile build-web/build targets, GitHub Actions CI, README, packageManager pin, and validated make build with Dagger exporting assets before embedded Go build.
 
+
+## 2026-05-01
+
+Improved tutorial rendering: stripped markdown frontmatter preamble, added syntax-highlighted fenced code blocks with language labels, and added clipboard copy buttons for code samples.
+

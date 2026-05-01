@@ -581,3 +581,28 @@ rm -rf ui/dist ui/storybook-static bin
 
 1. Commit Phase 10/11.
 2. Optionally run an end-to-end browser smoke against the embedded binary.
+
+## 2026-05-01 — Tutorial code rendering polish
+
+### What was done
+
+1. Stripped the YAML frontmatter preamble before rendering `tutorial.md`.
+2. Added syntax highlighting for fenced code blocks using `react-syntax-highlighter` with a light Prism language registry.
+3. Added language labels and clipboard copy buttons to each fenced code block.
+4. Added CSS for the code toolbar, highlighted code container, and copy button states.
+
+### Commands run
+
+```bash
+pnpm --dir ui add react-syntax-highlighter
+pnpm --dir ui add -D @types/react-syntax-highlighter
+pnpm --dir ui lint
+pnpm --dir ui build
+pnpm --dir ui build-storybook
+go test ./...
+rm -rf ui/dist ui/storybook-static
+```
+
+### Notes
+
+- The app build still reports a Vite chunk-size warning because the tutorial markdown and syntax-highlighting support are bundled into the main app chunk. It builds successfully; a future improvement would lazy-load the tutorial route.
