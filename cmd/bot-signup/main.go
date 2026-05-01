@@ -13,10 +13,14 @@ import (
 )
 
 var (
-	addr      string
-	dbPath    string
-	jwtSecret string
-	version   = "dev"
+	addr                string
+	dbPath              string
+	sessionSecret       string
+	discordClientID     string
+	discordClientSecret string
+	discordRedirectURL  string
+	secureCookies       bool
+	version             = "dev"
 )
 
 func main() {
@@ -34,7 +38,11 @@ func main() {
 	}
 	serveCmd.Flags().StringVar(&addr, "addr", envOrDefault("ADDR", ":8080"), "HTTP listen address")
 	serveCmd.Flags().StringVar(&dbPath, "db", envOrDefault("DB_PATH", "data/bot-signup.db"), "SQLite database path")
-	serveCmd.Flags().StringVar(&jwtSecret, "jwt-secret", envOrDefault("JWT_SECRET", "dev-insecure-change-me"), "JWT signing secret")
+	serveCmd.Flags().StringVar(&sessionSecret, "session-secret", envOrDefault("SESSION_SECRET", "dev-insecure-change-me"), "session signing secret")
+	serveCmd.Flags().StringVar(&discordClientID, "discord-client-id", envOrDefault("DISCORD_CLIENT_ID", ""), "Discord OAuth client ID")
+	serveCmd.Flags().StringVar(&discordClientSecret, "discord-client-secret", envOrDefault("DISCORD_CLIENT_SECRET", ""), "Discord OAuth client secret")
+	serveCmd.Flags().StringVar(&discordRedirectURL, "discord-redirect-url", envOrDefault("DISCORD_REDIRECT_URL", "http://localhost:8080/auth/discord/callback"), "Discord OAuth redirect URL")
+	serveCmd.Flags().BoolVar(&secureCookies, "secure-cookies", envOrDefault("SECURE_COOKIES", "") == "true", "set Secure on auth cookies")
 
 	rootCmd.AddCommand(serveCmd)
 
@@ -53,7 +61,14 @@ func runServe(addr string) error {
 	defer db.Close()
 
 	mux := http.NewServeMux()
-	srv := server.New(db, []byte(jwtSecret), version)
+	srv := server.New(db, server.Options{
+		Version:             version,
+		SessionSecret:       []byte(sessionSecret),
+		SecureCookies:       secureCookies,
+		DiscordClientID:     discordClientID,
+		DiscordClientSecret: discordClientSecret,
+		DiscordRedirectURL:  discordRedirectURL,
+	})
 	srv.RegisterRoutes(mux)
 
 	log.Printf("bot-signup server listening on %s", addr)

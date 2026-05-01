@@ -4,11 +4,13 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
+	"regexp"
 	"strings"
 
-	"github.com/go-go-golems/bot-signup/internal/auth"
 	"github.com/go-go-golems/bot-signup/internal/database"
 )
+
+var emailPattern = regexp.MustCompile(`^[^\s@]+@[^\s@]+\.[^\s@]+$`)
 
 type profileResponse struct {
 	User           *database.User           `json:"user"`
@@ -19,11 +21,6 @@ type profileResponse struct {
 type updateProfileRequest struct {
 	Email       string `json:"email"`
 	DisplayName string `json:"display_name"`
-}
-
-type changePasswordRequest struct {
-	CurrentPassword string `json:"current_password"`
-	NewPassword     string `json:"new_password"`
 }
 
 func (s *Server) handleGetProfile(w http.ResponseWriter, r *http.Request) {
@@ -57,8 +54,12 @@ func (s *Server) handleUpdateProfile(w http.ResponseWriter, r *http.Request) {
 	}
 	req.Email = strings.ToLower(strings.TrimSpace(req.Email))
 	req.DisplayName = strings.TrimSpace(req.DisplayName)
-	if !emailPattern.MatchString(req.Email) || len(req.DisplayName) < 2 || len(req.DisplayName) > 50 {
-		respondError(w, http.StatusBadRequest, "invalid profile fields")
+	if req.Email != "" && !emailPattern.MatchString(req.Email) {
+		respondError(w, http.StatusBadRequest, "invalid email")
+		return
+	}
+	if len(req.DisplayName) < 2 || len(req.DisplayName) > 50 {
+		respondError(w, http.StatusBadRequest, "invalid display name")
 		return
 	}
 	updated, err := s.db.UpdateUserProfile(r.Context(), user.ID, req.Email, req.DisplayName)
@@ -67,36 +68,6 @@ func (s *Server) handleUpdateProfile(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	respondJSON(w, http.StatusOK, map[string]any{"user": updated})
-}
-
-func (s *Server) handleChangePassword(w http.ResponseWriter, r *http.Request) {
-	user, ok := s.currentUser(w, r)
-	if !ok {
-		return
-	}
-	var req changePasswordRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		respondError(w, http.StatusBadRequest, "invalid request body")
-		return
-	}
-	if !auth.CheckPassword(user.PasswordHash, req.CurrentPassword) {
-		respondError(w, http.StatusUnauthorized, "invalid current password")
-		return
-	}
-	if len(req.NewPassword) < 8 {
-		respondError(w, http.StatusBadRequest, "new password must be at least 8 characters")
-		return
-	}
-	hash, err := auth.HashPassword(req.NewPassword)
-	if err != nil {
-		respondError(w, http.StatusInternalServerError, "failed to hash password")
-		return
-	}
-	if err := s.db.UpdateUserPassword(r.Context(), user.ID, hash); err != nil {
-		respondError(w, http.StatusInternalServerError, "failed to update password")
-		return
-	}
-	respondJSON(w, http.StatusOK, map[string]string{"message": "password updated"})
 }
 
 func (s *Server) currentUser(w http.ResponseWriter, r *http.Request) (*database.User, bool) {

@@ -3,9 +3,6 @@ package server
 import (
 	"context"
 	"net/http"
-	"strings"
-
-	"github.com/go-go-golems/bot-signup/internal/auth"
 )
 
 type contextKey string
@@ -15,25 +12,20 @@ const (
 	contextKeyRole   contextKey = "role"
 )
 
-func (s *Server) AuthMiddleware(next http.HandlerFunc) http.HandlerFunc {
+func (s *Server) SessionMiddleware(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		authHeader := r.Header.Get("Authorization")
-		if authHeader == "" {
-			respondError(w, http.StatusUnauthorized, "missing authorization header")
-			return
-		}
-		tokenString, ok := strings.CutPrefix(authHeader, "Bearer ")
-		if !ok || tokenString == "" {
-			respondError(w, http.StatusUnauthorized, "invalid authorization header")
-			return
-		}
-		claims, err := auth.ParseToken(tokenString, s.jwtSecret)
+		userID, err := s.sessions.ReadSession(r)
 		if err != nil {
-			respondError(w, http.StatusUnauthorized, "invalid token")
+			respondError(w, http.StatusUnauthorized, "not authenticated")
 			return
 		}
-		ctx := context.WithValue(r.Context(), contextKeyUserID, claims.UserID)
-		ctx = context.WithValue(ctx, contextKeyRole, claims.Role)
+		user, err := s.db.GetUserByID(r.Context(), userID)
+		if err != nil {
+			respondError(w, http.StatusUnauthorized, "not authenticated")
+			return
+		}
+		ctx := context.WithValue(r.Context(), contextKeyUserID, user.ID)
+		ctx = context.WithValue(ctx, contextKeyRole, string(user.Role))
 		next(w, r.WithContext(ctx))
 	}
 }

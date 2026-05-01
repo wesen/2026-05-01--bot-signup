@@ -1,104 +1,54 @@
 package server
 
 import (
-	"encoding/json"
 	"errors"
 	"net/http"
-	"regexp"
-	"strings"
 
-	"github.com/go-go-golems/bot-signup/internal/auth"
 	"github.com/go-go-golems/bot-signup/internal/database"
 )
 
-var (
-	discordIDPattern = regexp.MustCompile(`^[0-9]{3,20}$`)
-	emailPattern     = regexp.MustCompile(`^[^\s@]+@[^\s@]+\.[^\s@]+$`)
-)
-
-type signupRequest struct {
-	DiscordID   string `json:"discord_id"`
-	Email       string `json:"email"`
-	DisplayName string `json:"display_name"`
-	Password    string `json:"password"`
-}
-
-type loginRequest struct {
-	Email    string `json:"email"`
-	Password string `json:"password"`
-}
-
-type authResponse struct {
-	Token string         `json:"token"`
-	User  *database.User `json:"user"`
-}
-
-func (s *Server) handleSignup(w http.ResponseWriter, r *http.Request) {
-	var req signupRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		respondError(w, http.StatusBadRequest, "invalid request body")
-		return
-	}
-	req.normalize()
-	if errorsByField := validateSignup(req); len(errorsByField) > 0 {
-		respondJSON(w, http.StatusBadRequest, map[string]any{"errors": errorsByField})
-		return
-	}
-
-	if _, err := s.db.GetUserByDiscordID(r.Context(), req.DiscordID); err == nil {
-		respondError(w, http.StatusConflict, "Discord ID already registered")
-		return
-	} else if !errors.Is(err, database.ErrNotFound) {
-		respondError(w, http.StatusInternalServerError, "database error")
-		return
-	}
-	if _, err := s.db.GetUserByEmail(r.Context(), req.Email); err == nil {
-		respondError(w, http.StatusConflict, "Email already registered")
-		return
-	} else if !errors.Is(err, database.ErrNotFound) {
-		respondError(w, http.StatusInternalServerError, "database error")
-		return
-	}
-
-	passwordHash, err := auth.HashPassword(req.Password)
+func (s *Server) handleDiscordLogin(w http.ResponseWriter, r *http.Request) {
+	state, err := s.sessions.WriteOAuthState(w, r.URL.Query().Get("return_to"))
 	if err != nil {
-		respondError(w, http.StatusInternalServerError, "failed to hash password")
+		respondError(w, http.StatusInternalServerError, "failed to create oauth state")
 		return
 	}
-	user, err := s.db.CreateUser(r.Context(), req.DiscordID, req.Email, req.DisplayName, passwordHash)
+	http.Redirect(w, r, s.discordOAuth.AuthCodeURL(state), http.StatusFound)
+}
+
+func (s *Server) handleDiscordCallback(w http.ResponseWriter, r *http.Request) {
+	returnTo, err := s.sessions.ConsumeOAuthState(w, r, r.URL.Query().Get("state"))
+	if err != nil {
+		respondError(w, http.StatusBadRequest, "invalid oauth state")
+		return
+	}
+	code := r.URL.Query().Get("code")
+	if code == "" {
+		respondError(w, http.StatusBadRequest, "missing oauth code")
+		return
+	}
+	discordUser, err := s.discordOAuth.ExchangeAndFetchUser(r.Context(), code)
+	if err != nil {
+		respondError(w, http.StatusBadGateway, "discord oauth failed")
+		return
+	}
+	user, err := s.db.UpsertDiscordUser(r.Context(), discordUser.ID, discordUser.Email, discordUser.DisplayName(), discordUser.AvatarURL())
 	if err != nil {
 		respondError(w, http.StatusInternalServerError, "failed to create user")
 		return
 	}
-	token, err := auth.GenerateToken(user.ID, string(user.Role), s.jwtSecret)
-	if err != nil {
-		respondError(w, http.StatusInternalServerError, "failed to generate token")
+	if err := s.sessions.WriteSession(w, user.ID); err != nil {
+		respondError(w, http.StatusInternalServerError, "failed to create session")
 		return
 	}
-	respondJSON(w, http.StatusCreated, authResponse{Token: token, User: user})
-}
-
-func (s *Server) handleLogin(w http.ResponseWriter, r *http.Request) {
-	var req loginRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		respondError(w, http.StatusBadRequest, "invalid request body")
-		return
+	if returnTo == "" || returnTo == "/waiting-list" {
+		returnTo = routeForUser(user)
 	}
-	req.Email = strings.ToLower(strings.TrimSpace(req.Email))
-	user, err := s.db.GetUserByEmail(r.Context(), req.Email)
-	if err != nil || !auth.CheckPassword(user.PasswordHash, req.Password) {
-		respondError(w, http.StatusUnauthorized, "invalid email or password")
-		return
-	}
-	token, err := auth.GenerateToken(user.ID, string(user.Role), s.jwtSecret)
-	if err != nil {
-		respondError(w, http.StatusInternalServerError, "failed to generate token")
-		return
-	}
-	respondJSON(w, http.StatusOK, authResponse{Token: token, User: user})
+	http.Redirect(w, r, returnTo, http.StatusFound)
 }
 
 func (s *Server) handleLogout(w http.ResponseWriter, r *http.Request) {
+	s.sessions.ClearSession(w)
 	respondJSON(w, http.StatusOK, map[string]string{"message": "logged out"})
 }
 
@@ -120,25 +70,14 @@ func (s *Server) handleMe(w http.ResponseWriter, r *http.Request) {
 	respondJSON(w, http.StatusOK, user)
 }
 
-func (req *signupRequest) normalize() {
-	req.DiscordID = strings.TrimSpace(req.DiscordID)
-	req.Email = strings.ToLower(strings.TrimSpace(req.Email))
-	req.DisplayName = strings.TrimSpace(req.DisplayName)
-}
-
-func validateSignup(req signupRequest) map[string]string {
-	errs := map[string]string{}
-	if !discordIDPattern.MatchString(req.DiscordID) {
-		errs["discord_id"] = "Discord ID must be a numeric string"
+func routeForUser(user *database.User) string {
+	if user.Role == database.UserRoleAdmin {
+		return "/admin"
 	}
-	if !emailPattern.MatchString(req.Email) {
-		errs["email"] = "Email must be valid"
+	switch user.Status {
+	case database.UserStatusApproved:
+		return "/profile"
+	default:
+		return "/waiting-list"
 	}
-	if len(req.DisplayName) < 2 || len(req.DisplayName) > 50 {
-		errs["display_name"] = "Display name must be between 2 and 50 characters"
-	}
-	if len(req.Password) < 8 {
-		errs["password"] = "Password must be at least 8 characters"
-	}
-	return errs
 }

@@ -274,3 +274,60 @@ The backend already has a committed bcrypt/JWT implementation. Since there is no
 
 1. Commit the requirement-pivot documentation and stored image.
 2. Implement Phase 3R: replace password/JWT auth with Discord OAuth and HTTP-only sessions.
+
+## 2026-05-01 — Phase 3R/4R implementation
+
+### What was done
+
+1. Removed password/JWT auth files and tests.
+2. Added `golang.org/x/oauth2` and implemented `internal/auth/discord_oauth.go`:
+   - Discord authorize URL generation,
+   - authorization-code exchange,
+   - `/users/@me` fetch,
+   - Discord avatar URL helper.
+3. Added `internal/auth/sessions.go`:
+   - signed HTTP-only session cookie,
+   - signed short-lived OAuth state cookie,
+   - return-to sanitization,
+   - logout cookie clearing.
+4. Changed `users` schema/model to Discord OAuth fields:
+   - `discord_id`, `email`, `display_name`, `avatar_url`, `last_login_at`, `status`, `role`, timestamps.
+   - Removed `password_hash` and auth-provider/password concepts.
+5. Replaced `CreateUser` with `UpsertDiscordUser`.
+6. Replaced auth routes with:
+   - `GET /auth/discord/login`,
+   - `GET /auth/discord/callback`,
+   - `POST /api/auth/logout`,
+   - `GET /api/auth/me`.
+7. Replaced JWT middleware with `SessionMiddleware`.
+8. Updated profile/admin handlers and tests to use session cookies and OAuth-created users.
+9. Updated implementation guide snippets that still referenced the old password/JWT flow.
+
+### Commands run
+
+```bash
+go get golang.org/x/oauth2@latest
+rm internal/auth/jwt.go internal/auth/password.go internal/auth/auth_test.go internal/server/auth_handlers_test.go
+gofmt -w cmd/bot-signup/main.go internal/auth/*.go internal/database/*.go internal/server/*.go
+go mod tidy
+go test ./...
+rg -n "CreateUser|HashPassword|CheckPassword|jwtSecret|AuthMiddleware|bcrypt|password_hash|useLoginMutation|localStorage|LoginPage|SignupPage" \
+  ttmp/2026/05/01/bot-signup--discord-bot-vibe-coding-signup-platform/design-doc/01-full-system-design-and-implementation-guide.md
+```
+
+### What worked
+
+- `go test ./...` passes.
+- OAuth login test verifies redirect + HTTP-only OAuth state cookie.
+- OAuth callback test verifies user creation, HTTP-only session cookie, and `/api/auth/me`.
+- Profile/admin tests now authenticate with session cookies.
+
+### What was tricky
+
+- Because no backwards compatibility is required, the schema migration was rewritten instead of adding incremental compatibility columns. This is clean for a new app, but any local dev DB from the old auth implementation should be deleted.
+- OAuth state uses a signed short-lived cookie. That avoids adding an `oauth_states` table while still preventing CSRF and open redirects.
+
+### Next steps
+
+1. Commit Phase 3R/4R.
+2. Start Phase 5 frontend scaffolding and build the VibeBot Sessions landing UI to match the stored reference image.

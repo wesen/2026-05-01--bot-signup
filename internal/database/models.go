@@ -18,17 +18,18 @@ const (
 	UserRoleAdmin UserRole = "admin"
 )
 
-// User is the database representation of a signup account.
+// User is the database representation of a Discord-authenticated signup account.
 type User struct {
-	ID           int64      `json:"id"`
-	DiscordID    string     `json:"discord_id"`
-	Email        string     `json:"email"`
-	DisplayName  string     `json:"display_name"`
-	PasswordHash string     `json:"-"`
-	Status       UserStatus `json:"status"`
-	Role         UserRole   `json:"role"`
-	CreatedAt    string     `json:"created_at"`
-	UpdatedAt    string     `json:"updated_at"`
+	ID          int64      `json:"id"`
+	DiscordID   string     `json:"discord_id"`
+	Email       string     `json:"email,omitempty"`
+	DisplayName string     `json:"display_name"`
+	AvatarURL   string     `json:"avatar_url,omitempty"`
+	Status      UserStatus `json:"status"`
+	Role        UserRole   `json:"role"`
+	LastLoginAt string     `json:"last_login_at,omitempty"`
+	CreatedAt   string     `json:"created_at"`
+	UpdatedAt   string     `json:"updated_at"`
 }
 
 // BotCredentials are the Discord application values an admin assigns on approval.

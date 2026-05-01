@@ -9,11 +9,11 @@ import (
 func TestBotCredentialsCRUD(t *testing.T) {
 	ctx := context.Background()
 	db := openTestDB(t)
-	user, err := db.CreateUser(ctx, "123", "user@example.com", "User", "hash")
+	user, err := db.UpsertDiscordUser(ctx, "123", "user@example.com", "User", "")
 	if err != nil {
 		t.Fatalf("create user: %v", err)
 	}
-	admin, err := db.CreateUser(ctx, "999", "admin@example.com", "Admin", "hash")
+	admin, err := db.UpsertDiscordUser(ctx, "999", "admin@example.com", "Admin", "")
 	if err != nil {
 		t.Fatalf("create admin: %v", err)
 	}

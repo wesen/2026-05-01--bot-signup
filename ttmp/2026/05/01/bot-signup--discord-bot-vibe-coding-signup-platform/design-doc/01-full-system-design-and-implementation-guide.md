@@ -1566,7 +1566,7 @@ bot-signup/
 │   │   ├── auth_handlers.go          # POST /api/auth/* handlers
 │   │   ├── profile_handlers.go       # GET/PUT /api/profile handlers
 │   │   ├── admin_handlers.go         # GET/POST /api/admin/* handlers
-│   │   ├── middleware.go             # AuthMiddleware, AdminOnly, CORS, logging
+│   │   ├── middleware.go             # SessionMiddleware, AdminOnly, CORS, logging
 │   │   └── helpers.go                # respondJSON, respondError utilities
 │   │
 │   ├── auth/
@@ -1744,11 +1744,11 @@ internal/database/credentials_test.go
 1. Add `golang.org/x/oauth2` dependency
 2. Create `internal/auth/discord_oauth.go` for Discord OAuth config, code exchange, and user fetch
 3. Create `internal/auth/sessions.go` for signed HTTP-only session cookies
-4. Create `internal/server/middleware.go` with `AuthMiddleware()` and `AdminOnly()`
+4. Create `internal/server/middleware.go` with `SessionMiddleware()` and `AdminOnly()`
 5. Create `internal/server/auth_handlers.go` with:
    - `GET /auth/discord/login` — creates state and redirects to Discord
    - `GET /auth/discord/callback` — validates state, exchanges code, upserts user, sets session cookie
-   - `POST /api/auth/logout` — returns success (client deletes token)
+   - `POST /api/auth/logout` — clears the HTTP-only session cookie
    - `GET /api/auth/me` — returns current user (requires auth)
 6. Test by opening `/auth/discord/login?return_to=/waiting-list` in a browser with Discord OAuth env vars configured.
 
@@ -2135,7 +2135,7 @@ func main() {
             defer db.Close()
 
             // 3. Create server
-            srv := server.New(db, []byte(jwtSecret))
+            srv := server.New(db, server.Options{SessionSecret: []byte(sessionSecret)})
 
             // 4. Create ServeMux and register routes
             mux := http.NewServeMux()
@@ -2164,20 +2164,20 @@ func (s *Server) RegisterRoutes(mux *http.ServeMux) {
     mux.HandleFunc("GET /auth/discord/login", s.handleDiscordLogin)
     mux.HandleFunc("GET /auth/discord/callback", s.handleDiscordCallback)
     mux.HandleFunc("POST /api/auth/logout", s.handleLogout)
-    mux.HandleFunc("GET /api/auth/me", AuthMiddleware(s.secret, s.handleMe))
+    mux.HandleFunc("GET /api/auth/me", s.SessionMiddleware(s.handleMe))
 
     // ── Profile endpoints (authenticated) ─────────────
-    mux.HandleFunc("GET /api/profile", AuthMiddleware(s.secret, s.handleGetProfile))
-    mux.HandleFunc("PUT /api/profile", AuthMiddleware(s.secret, s.handleUpdateProfile))
+    mux.HandleFunc("GET /api/profile", s.SessionMiddleware(s.handleGetProfile))
+    mux.HandleFunc("PUT /api/profile", s.SessionMiddleware(s.handleUpdateProfile))
 
     // ── Admin endpoints (authenticated + admin role) ──
-    mux.HandleFunc("GET /api/admin/waitlist", AuthMiddleware(s.secret, AdminOnly(s.handleWaitlist)))
-    mux.HandleFunc("GET /api/admin/users", AuthMiddleware(s.secret, AdminOnly(s.handleListUsers)))
-    mux.HandleFunc("POST /api/admin/users/{id}/approve", AuthMiddleware(s.secret, AdminOnly(s.handleApproveUser)))
-    mux.HandleFunc("POST /api/admin/users/{id}/reject", AuthMiddleware(s.secret, AdminOnly(s.handleRejectUser)))
-    mux.HandleFunc("POST /api/admin/users/{id}/suspend", AuthMiddleware(s.secret, AdminOnly(s.handleSuspendUser)))
-    mux.HandleFunc("PUT /api/admin/users/{id}/credentials", AuthMiddleware(s.secret, AdminOnly(s.handleUpdateCredentials)))
-    mux.HandleFunc("DELETE /api/admin/users/{id}", AuthMiddleware(s.secret, AdminOnly(s.handleDeleteUser)))
+    mux.HandleFunc("GET /api/admin/waitlist", s.SessionMiddleware(AdminOnly(s.handleWaitlist)))
+    mux.HandleFunc("GET /api/admin/users", s.SessionMiddleware(AdminOnly(s.handleListUsers)))
+    mux.HandleFunc("POST /api/admin/users/{id}/approve", s.SessionMiddleware(AdminOnly(s.handleApproveUser)))
+    mux.HandleFunc("POST /api/admin/users/{id}/reject", s.SessionMiddleware(AdminOnly(s.handleRejectUser)))
+    mux.HandleFunc("POST /api/admin/users/{id}/suspend", s.SessionMiddleware(AdminOnly(s.handleSuspendUser)))
+    mux.HandleFunc("PUT /api/admin/users/{id}/credentials", s.SessionMiddleware(AdminOnly(s.handleUpdateCredentials)))
+    mux.HandleFunc("DELETE /api/admin/users/{id}", s.SessionMiddleware(AdminOnly(s.handleDeleteUser)))
 
     // ── SPA fallback (MUST be last) ──────────────────
     RegisterSPA(mux, publicFS, SPAOptions{APIPrefix: "/api"})
@@ -2395,7 +2395,7 @@ make storybook     # or: cd ui && pnpm storybook
 Every database function has a table-driven test using an in-memory SQLite database:
 
 ```go
-func TestCreateUser(t *testing.T) {
+func TestUpsertDiscordUser(t *testing.T) {
     db := openTestDB(t) // in-memory SQLite
     defer db.Close()
 

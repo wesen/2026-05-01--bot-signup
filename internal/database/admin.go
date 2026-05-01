@@ -39,9 +39,7 @@ func (db *DB) ListUsers(ctx context.Context, opts ListUsersOptions) ([]*User, in
 		return nil, 0, fmt.Errorf("count users: %w", err)
 	}
 	args = append(args, opts.PerPage, offset)
-	rows, err := db.db.QueryContext(ctx, `
-		SELECT id, discord_id, email, display_name, password_hash, status, role, created_at, updated_at
-		FROM users`+where+`
+	rows, err := db.db.QueryContext(ctx, selectUserSQL+where+`
 		ORDER BY created_at DESC, id DESC
 		LIMIT ? OFFSET ?`, args...)
 	if err != nil {

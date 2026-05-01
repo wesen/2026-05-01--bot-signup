@@ -2,22 +2,18 @@ package server
 
 import (
 	"bytes"
-	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"strconv"
 	"testing"
 
 	"github.com/go-go-golems/bot-signup/internal/auth"
 	"github.com/go-go-golems/bot-signup/internal/database"
 )
 
-func createTestUser(t *testing.T, srv *Server, discordID, email, role string) (*database.User, string) {
+func createTestUser(t *testing.T, srv *Server, discordID, email, role string) (*database.User, *http.Cookie) {
 	t.Helper()
-	hash, err := auth.HashPassword("password123")
-	if err != nil {
-		t.Fatalf("hash password: %v", err)
-	}
-	user, err := srv.db.CreateUser(t.Context(), discordID, email, "Test User", hash)
+	user, err := srv.db.UpsertDiscordUser(t.Context(), discordID, email, "Test User", "")
 	if err != nil {
 		t.Fatalf("create test user: %v", err)
 	}
@@ -30,21 +26,27 @@ func createTestUser(t *testing.T, srv *Server, discordID, email, role string) (*
 			t.Fatalf("reload user: %v", err)
 		}
 	}
-	token, err := auth.GenerateToken(user.ID, string(user.Role), srv.jwtSecret)
-	if err != nil {
-		t.Fatalf("generate token: %v", err)
+	w := httptest.NewRecorder()
+	if err := srv.sessions.WriteSession(w, user.ID); err != nil {
+		t.Fatalf("write session: %v", err)
 	}
-	return user, token
+	for _, cookie := range w.Result().Cookies() {
+		if cookie.Name == auth.SessionCookieName {
+			return user, cookie
+		}
+	}
+	t.Fatal("session cookie not written")
+	return nil, nil
 }
 
-func TestProfileAndPassword(t *testing.T) {
+func TestProfileUpdate(t *testing.T) {
 	srv := newTestServer(t)
-	_, token := createTestUser(t, srv, "111", "user@example.com", "user")
+	_, session := createTestUser(t, srv, "111", "user@example.com", "user")
 	mux := http.NewServeMux()
 	srv.RegisterRoutes(mux)
 
 	req := httptest.NewRequest(http.MethodGet, "/api/profile", nil)
-	req.Header.Set("Authorization", "Bearer "+token)
+	req.AddCookie(session)
 	resp := httptest.NewRecorder()
 	mux.ServeHTTP(resp, req)
 	if resp.Code != http.StatusOK {
@@ -53,32 +55,23 @@ func TestProfileAndPassword(t *testing.T) {
 
 	updateBody := []byte(`{"email":"new@example.com","display_name":"New Name"}`)
 	updateReq := httptest.NewRequest(http.MethodPut, "/api/profile", bytes.NewReader(updateBody))
-	updateReq.Header.Set("Authorization", "Bearer "+token)
+	updateReq.AddCookie(session)
 	updateResp := httptest.NewRecorder()
 	mux.ServeHTTP(updateResp, updateReq)
 	if updateResp.Code != http.StatusOK {
 		t.Fatalf("expected update profile 200, got %d body=%s", updateResp.Code, updateResp.Body.String())
-	}
-
-	passwordBody := []byte(`{"current_password":"password123","new_password":"newpassword123"}`)
-	passwordReq := httptest.NewRequest(http.MethodPut, "/api/profile/password", bytes.NewReader(passwordBody))
-	passwordReq.Header.Set("Authorization", "Bearer "+token)
-	passwordResp := httptest.NewRecorder()
-	mux.ServeHTTP(passwordResp, passwordReq)
-	if passwordResp.Code != http.StatusOK {
-		t.Fatalf("expected password 200, got %d body=%s", passwordResp.Code, passwordResp.Body.String())
 	}
 }
 
 func TestAdminApproveUser(t *testing.T) {
 	srv := newTestServer(t)
 	waitingUser, _ := createTestUser(t, srv, "222", "waiting@example.com", "user")
-	_, adminToken := createTestUser(t, srv, "999", "admin@example.com", "admin")
+	_, adminSession := createTestUser(t, srv, "999", "admin@example.com", "admin")
 	mux := http.NewServeMux()
 	srv.RegisterRoutes(mux)
 
 	waitlistReq := httptest.NewRequest(http.MethodGet, "/api/admin/waitlist", nil)
-	waitlistReq.Header.Set("Authorization", "Bearer "+adminToken)
+	waitlistReq.AddCookie(adminSession)
 	waitlistResp := httptest.NewRecorder()
 	mux.ServeHTTP(waitlistResp, waitlistReq)
 	if waitlistResp.Code != http.StatusOK {
@@ -86,8 +79,8 @@ func TestAdminApproveUser(t *testing.T) {
 	}
 
 	approveBody := []byte(`{"application_id":"987","bot_token":"token","guild_id":"111","public_key":"abcdef"}`)
-	approveReq := httptest.NewRequest(http.MethodPost, "/api/admin/users/"+jsonNumber(waitingUser.ID)+"/approve", bytes.NewReader(approveBody))
-	approveReq.Header.Set("Authorization", "Bearer "+adminToken)
+	approveReq := httptest.NewRequest(http.MethodPost, "/api/admin/users/"+strconv.FormatInt(waitingUser.ID, 10)+"/approve", bytes.NewReader(approveBody))
+	approveReq.AddCookie(adminSession)
 	approveResp := httptest.NewRecorder()
 	mux.ServeHTTP(approveResp, approveReq)
 	if approveResp.Code != http.StatusOK {
@@ -111,20 +104,15 @@ func TestAdminApproveUser(t *testing.T) {
 
 func TestAdminRouteRejectsNonAdmin(t *testing.T) {
 	srv := newTestServer(t)
-	_, token := createTestUser(t, srv, "333", "user@example.com", "user")
+	_, session := createTestUser(t, srv, "333", "user@example.com", "user")
 	mux := http.NewServeMux()
 	srv.RegisterRoutes(mux)
 
 	req := httptest.NewRequest(http.MethodGet, "/api/admin/waitlist", nil)
-	req.Header.Set("Authorization", "Bearer "+token)
+	req.AddCookie(session)
 	resp := httptest.NewRecorder()
 	mux.ServeHTTP(resp, req)
 	if resp.Code != http.StatusForbidden {
 		t.Fatalf("expected 403, got %d body=%s", resp.Code, resp.Body.String())
 	}
-}
-
-func jsonNumber(n int64) string {
-	b, _ := json.Marshal(n)
-	return string(b)
 }

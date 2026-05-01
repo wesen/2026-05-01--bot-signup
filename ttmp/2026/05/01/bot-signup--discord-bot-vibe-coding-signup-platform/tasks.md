@@ -4,8 +4,8 @@
 
 - [x] Phase 1: Project scaffolding (Go server + health endpoint)
 - [x] Phase 2: Database layer (SQLite + migrations + CRUD tests)
-- [ ] Phase 3R: Replace password/JWT auth with Discord OAuth + HTTP-only sessions
-- [ ] Phase 4R: Adjust profile/admin handlers to use session middleware and OAuth-created users
+- [x] Phase 3R: Replace password/JWT auth with Discord OAuth + HTTP-only sessions
+- [x] Phase 4R: Adjust profile/admin handlers to use session middleware and OAuth-created users
 - [ ] Phase 5: Frontend scaffolding (Vite + React + Tailwind + Storybook + RTK Query)
 - [ ] Phase 6: OAuth landing/signup card (VibeBot Sessions visual reference + Storybook stories)
 - [ ] Phase 7: User pages (profile + waiting list + credential display + stories)
