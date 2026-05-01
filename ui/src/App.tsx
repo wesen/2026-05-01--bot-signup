@@ -5,6 +5,7 @@ import { AdminRoute } from './components/AdminRoute'
 import { AuthCallbackPage } from './pages/AuthCallbackPage'
 import { AdminDashboard } from './pages/admin/AdminDashboard'
 import { AdminUserDetail } from './pages/admin/AdminUserDetail'
+import { GetStartedPage } from './pages/GetStartedPage'
 import { LandingPage } from './pages/LandingPage'
 import { ProfilePage } from './pages/ProfilePage'
 import { TutorialPage } from './pages/TutorialPage'
@@ -17,6 +18,7 @@ function App() {
         <Routes>
           <Route path="/" element={<LandingPage />} />
           <Route path="/auth/callback" element={<AuthCallbackPage />} />
+          <Route path="/get-started" element={<GetStartedPage />} />
           <Route path="/tutorial" element={<TutorialPage />} />
           <Route path="/waiting-list" element={<ProtectedRoute><WaitingListPage /></ProtectedRoute>} />
           <Route path="/profile" element={<ProtectedRoute><ProfilePage /></ProtectedRoute>} />

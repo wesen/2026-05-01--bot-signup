@@ -13,14 +13,15 @@ SyntaxHighlighter.registerLanguage('bash', bash)
 SyntaxHighlighter.registerLanguage('text', text)
 
 interface SetupGuideProps {
-  credentials: BotCredentials
+  credentials?: BotCredentials
 }
 
 export function SetupGuide({ credentials }: SetupGuideProps) {
-  const inviteURL = discordBotInviteURL(credentials.application_id)
+  const genericInviteURL = 'https://discord.com/oauth2/authorize?client_id=<DISCORD_APPLICATION_ID>&permissions=861140978752&integration_type=0&scope=applications.commands+bot'
+  const inviteURL = credentials ? discordBotInviteURL(credentials.application_id) : genericInviteURL
   const markdown = stripFrontmatter(guideMarkdown)
-    .replaceAll('<DISCORD_APPLICATION_ID>', credentials.application_id)
-    .replaceAll('https://discord.com/oauth2/authorize?client_id=<DISCORD_APPLICATION_ID>&permissions=861140978752&integration_type=0&scope=applications.commands+bot', inviteURL)
+    .replaceAll('<DISCORD_APPLICATION_ID>', credentials?.application_id ?? '<DISCORD_APPLICATION_ID>')
+    .replaceAll(genericInviteURL, inviteURL)
 
   return (
     <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-xl shadow-indigo-100/60">

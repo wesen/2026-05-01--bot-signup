@@ -4,7 +4,7 @@ import { apiSlice, useGetSessionQuery, useLogoutMutation } from '../store/api'
 import { AuthContext } from './context'
 import { useAppDispatch } from './hooks'
 
-const publicRoutes = new Set(['/tutorial', '/auth/callback'])
+const publicRoutes = new Set(['/get-started', '/tutorial', '/auth/callback'])
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const dispatch = useAppDispatch()

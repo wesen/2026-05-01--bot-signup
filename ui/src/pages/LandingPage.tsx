@@ -28,7 +28,7 @@ export function LandingPage() {
             <Link className="hidden hover:text-[#5865F2] sm:inline" to="/tutorial">
               Docs
             </Link>
-            <Link className="hidden hover:text-[#5865F2] sm:inline" to={user?.status === 'approved' ? '/profile' : '/tutorial'}>
+            <Link className="hidden hover:text-[#5865F2] sm:inline" to="/get-started">
               Get started
             </Link>
             {user ? (
