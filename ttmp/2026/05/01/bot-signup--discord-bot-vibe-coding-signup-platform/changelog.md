@@ -39,3 +39,8 @@ Implemented Phase 5/6 frontend scaffold: Vite React TypeScript app, Tailwind v4,
 
 Implemented Phase 7 user pages: protected route, waiting-list page, profile dashboard with credential cards, auth callback placeholder, tutorial placeholder, RTK Query getProfile endpoint, component/page Storybook stories, and validation with UI lint/build/storybook plus Go tests.
 
+
+## 2026-05-01
+
+Implemented Phase 8 admin pages: admin route guard, stats cards, waitlist table, approval form, admin dashboard/detail routes, RTK Query admin endpoints, admin Storybook stories, and validation with frontend lint/build/storybook plus Go tests.
+

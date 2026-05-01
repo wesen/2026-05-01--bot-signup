@@ -441,3 +441,53 @@ go test ./...
 
 1. Commit Phase 7.
 2. Start Phase 8 admin pages.
+
+## 2026-05-01 — Phase 8 admin pages
+
+### What was done
+
+1. Extended RTK Query with admin endpoints:
+   - `getWaitlist`,
+   - `getAdminUsers`,
+   - `approveUser`,
+   - `rejectUser`,
+   - `suspendUser`,
+   - `deleteUser`.
+2. Added admin guard component `AdminRoute`.
+3. Added admin UI components:
+   - `AdminStats`,
+   - `AdminUserTable`,
+   - `ApprovalForm`.
+4. Added admin pages:
+   - `/admin` dashboard with stats + waitlist,
+   - `/admin/users/:id` approval detail form.
+5. Added stories for admin components/pages:
+   - `AdminUserTable.stories.tsx`,
+   - `ApprovalForm.stories.tsx`,
+   - `AdminDashboard.stories.tsx`.
+6. Wired admin routes into `App.tsx`.
+
+### Commands run
+
+```bash
+pnpm --dir ui lint
+pnpm --dir ui build
+pnpm --dir ui build-storybook
+rm -rf ui/dist ui/storybook-static
+go test ./...
+```
+
+### What worked
+
+- UI lint, build, and Storybook build all pass.
+- Go tests continue to pass.
+- Admin dashboard can display seeded Storybook waitlist data and stats.
+
+### What was tricky
+
+- The backend currently has no `GET /api/admin/users/{id}` endpoint, so `AdminUserDetail` loads the admin user list and finds the target by ID. This works for the current small-scale admin UI but should become a dedicated endpoint if the list grows.
+
+### Next steps
+
+1. Commit Phase 8.
+2. Start Phase 9 tutorial markdown content.

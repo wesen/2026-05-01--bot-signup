@@ -37,6 +37,32 @@ export interface Stats {
   bots_running: number
 }
 
+export interface WaitlistResponse {
+  users: User[]
+  total: number
+}
+
+export interface AdminUsersResponse {
+  users: User[]
+  total: number
+  page: number
+  per_page: number
+}
+
+export interface ApproveUserRequest {
+  id: number
+  application_id: string
+  bot_token: string
+  guild_id: string
+  public_key: string
+}
+
+export interface ApproveUserResponse {
+  message: string
+  user: User
+  bot_credentials: BotCredentials
+}
+
 export const apiSlice = createApi({
   reducerPath: 'api',
   baseQuery: fetchBaseQuery({
@@ -61,7 +87,42 @@ export const apiSlice = createApi({
       query: () => '/stats',
       providesTags: ['Stats'],
     }),
+    getWaitlist: builder.query<WaitlistResponse, void>({
+      query: () => '/admin/waitlist',
+      providesTags: ['User'],
+    }),
+    getAdminUsers: builder.query<AdminUsersResponse, { page?: number; per_page?: number; status?: string } | void>({
+      query: (params) => ({ url: '/admin/users', params: params ?? undefined }),
+      providesTags: ['User'],
+    }),
+    approveUser: builder.mutation<ApproveUserResponse, ApproveUserRequest>({
+      query: ({ id, ...body }) => ({ url: `/admin/users/${id}/approve`, method: 'POST', body }),
+      invalidatesTags: ['User', 'Stats'],
+    }),
+    rejectUser: builder.mutation<{ message: string }, number>({
+      query: (id) => ({ url: `/admin/users/${id}/reject`, method: 'POST' }),
+      invalidatesTags: ['User', 'Stats'],
+    }),
+    suspendUser: builder.mutation<{ message: string }, number>({
+      query: (id) => ({ url: `/admin/users/${id}/suspend`, method: 'POST' }),
+      invalidatesTags: ['User', 'Stats'],
+    }),
+    deleteUser: builder.mutation<{ message: string }, number>({
+      query: (id) => ({ url: `/admin/users/${id}`, method: 'DELETE' }),
+      invalidatesTags: ['User', 'Stats'],
+    }),
   }),
 })
 
-export const { useGetMeQuery, useLogoutMutation, useGetProfileQuery, useGetStatsQuery } = apiSlice
+export const {
+  useGetMeQuery,
+  useLogoutMutation,
+  useGetProfileQuery,
+  useGetStatsQuery,
+  useGetWaitlistQuery,
+  useGetAdminUsersQuery,
+  useApproveUserMutation,
+  useRejectUserMutation,
+  useSuspendUserMutation,
+  useDeleteUserMutation,
+} = apiSlice
