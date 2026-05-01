@@ -13,9 +13,10 @@ import (
 )
 
 var (
-	addr    string
-	dbPath  string
-	version = "dev"
+	addr      string
+	dbPath    string
+	jwtSecret string
+	version   = "dev"
 )
 
 func main() {
@@ -33,6 +34,7 @@ func main() {
 	}
 	serveCmd.Flags().StringVar(&addr, "addr", envOrDefault("ADDR", ":8080"), "HTTP listen address")
 	serveCmd.Flags().StringVar(&dbPath, "db", envOrDefault("DB_PATH", "data/bot-signup.db"), "SQLite database path")
+	serveCmd.Flags().StringVar(&jwtSecret, "jwt-secret", envOrDefault("JWT_SECRET", "dev-insecure-change-me"), "JWT signing secret")
 
 	rootCmd.AddCommand(serveCmd)
 
@@ -51,7 +53,7 @@ func runServe(addr string) error {
 	defer db.Close()
 
 	mux := http.NewServeMux()
-	srv := server.New(db, version)
+	srv := server.New(db, []byte(jwtSecret), version)
 	srv.RegisterRoutes(mux)
 
 	log.Printf("bot-signup server listening on %s", addr)

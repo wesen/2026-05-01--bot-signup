@@ -135,3 +135,44 @@ go test ./...
 
 1. Commit Phase 2 database layer.
 2. Start Phase 3 authentication (bcrypt, JWT, signup/login handlers).
+
+## 2026-05-01 — Phase 3 implementation
+
+### What was done
+
+1. Added `internal/auth` with bcrypt password hashing and JWT generation/parsing.
+2. Added auth middleware that validates `Authorization: Bearer <token>` and injects user ID / role into request context.
+3. Added `AdminOnly` middleware for later admin endpoints.
+4. Added auth routes:
+   - `POST /api/auth/signup`
+   - `POST /api/auth/login`
+   - `POST /api/auth/logout`
+   - `GET /api/auth/me`
+5. Added validation for Discord ID, email, display name, and password length.
+6. Added server tests covering signup → login → authenticated `/me`, and signup validation failures.
+
+### Commands run
+
+```bash
+go get golang.org/x/crypto/bcrypt github.com/golang-jwt/jwt/v5@latest
+gofmt -w internal/auth/*.go internal/server/*.go cmd/bot-signup/main.go
+go mod tidy
+go test ./...
+```
+
+### What worked
+
+- `go test ./...` passes.
+- Signup creates a waiting user and returns a JWT.
+- Login verifies the bcrypt password and returns a JWT.
+- `/api/auth/me` resolves the current user via the signed token.
+
+### What was tricky
+
+- Kept auth context values typed through unexported context keys to avoid collisions.
+- The CLI currently defaults to `dev-insecure-change-me` for local JWT signing; production should set `JWT_SECRET`.
+
+### Next steps
+
+1. Commit Phase 3 auth implementation.
+2. Start Phase 4 profile and admin handlers.
