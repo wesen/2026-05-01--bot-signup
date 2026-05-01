@@ -1,6 +1,6 @@
 import { Check, Copy } from 'lucide-react'
 import { useMemo, useState } from 'react'
-import type { BotCredentials } from '../store/api'
+import { discordBotInviteURL, type BotCredentials } from '../store/api'
 
 interface EnvrcSnippetProps {
   credentials: BotCredentials
@@ -9,6 +9,7 @@ interface EnvrcSnippetProps {
 export function EnvrcSnippet({ credentials }: EnvrcSnippetProps) {
   const [copied, setCopied] = useState(false)
   const envrc = useMemo(() => buildEnvrc(credentials), [credentials])
+  const inviteURL = useMemo(() => discordBotInviteURL(credentials.application_id), [credentials.application_id])
 
   const copy = async () => {
     await navigator.clipboard.writeText(envrc)
@@ -36,6 +37,12 @@ export function EnvrcSnippet({ credentials }: EnvrcSnippetProps) {
       <pre className="overflow-x-auto rounded-xl bg-slate-900 p-4 text-xs leading-6 text-slate-100">
         <code>{envrc}</code>
       </pre>
+      <div className="mt-4 rounded-xl border border-slate-800 bg-slate-900 p-4">
+        <p className="text-sm font-bold text-slate-100">Invite this bot to your Discord server</p>
+        <a className="mt-2 block break-all font-mono text-xs leading-6 text-indigo-200 hover:text-indigo-100" href={inviteURL} target="_blank" rel="noreferrer">
+          {inviteURL}
+        </a>
+      </div>
     </section>
   )
 }

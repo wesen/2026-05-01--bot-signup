@@ -24,6 +24,16 @@ export interface BotCredentials {
   approved_at?: string
 }
 
+export function discordBotInviteURL(applicationID: string) {
+  const params = new URLSearchParams({
+    client_id: applicationID,
+    permissions: '861140978752',
+    integration_type: '0',
+    scope: 'applications.commands bot',
+  })
+  return `https://discord.com/oauth2/authorize?${params.toString().replace(/\+/g, '+')}`
+}
+
 export interface ProfileResponse {
   user: User
   bot_credentials: BotCredentials | null

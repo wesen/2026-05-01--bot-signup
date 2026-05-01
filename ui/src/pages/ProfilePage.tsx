@@ -4,7 +4,7 @@ import { useAuth } from '../auth/useAuth'
 import { CredentialTable } from '../components/CredentialTable'
 import { EnvrcSnippet } from '../components/EnvrcSnippet'
 import { StatusBadge } from '../components/StatusBadge'
-import { useGetProfileQuery } from '../store/api'
+import { discordBotInviteURL, useGetProfileQuery } from '../store/api'
 
 export function ProfilePage() {
   const { logout } = useAuth()
@@ -56,6 +56,14 @@ export function ProfilePage() {
             <div className="mt-8">
               <h2 className="text-2xl font-black text-slate-950">Bot credentials</h2>
               <p className="mt-2 text-sm text-slate-500">Keep these secret. Never paste your bot token into public chat or commits.</p>
+              <a
+                className="mt-4 inline-flex rounded-xl bg-[#5865F2] px-4 py-2 text-sm font-bold text-white shadow-sm transition hover:bg-[#4752C4]"
+                href={discordBotInviteURL(credentials.application_id)}
+                target="_blank"
+                rel="noreferrer"
+              >
+                Request server access / invite bot
+              </a>
               <div className="mt-5">
                 <CredentialTable credentials={credentials} />
               </div>
