@@ -176,3 +176,46 @@ go test ./...
 
 1. Commit Phase 3 auth implementation.
 2. Start Phase 4 profile and admin handlers.
+
+## 2026-05-01 — Phase 4 implementation
+
+### What was done
+
+1. Added profile routes:
+   - `GET /api/profile`
+   - `PUT /api/profile`
+   - `PUT /api/profile/password`
+2. Added public stats route `GET /api/stats`.
+3. Added admin routes:
+   - `GET /api/admin/waitlist`
+   - `GET /api/admin/users`
+   - `POST /api/admin/users/{id}/approve`
+   - `POST /api/admin/users/{id}/reject`
+   - `POST /api/admin/users/{id}/suspend`
+   - `PUT /api/admin/users/{id}/credentials`
+   - `DELETE /api/admin/users/{id}`
+4. Added database helpers for profile updates, password updates, role updates, all-user listing, stats, and transactional approval.
+5. Added tests for profile updates/password changes, admin approval, and non-admin rejection.
+
+### Commands run
+
+```bash
+gofmt -w internal/database/*.go internal/server/*.go
+go test ./...
+```
+
+### What worked
+
+- `go test ./...` passes.
+- Admin approval updates the user status to `approved` and inserts credentials in a transaction.
+- Non-admin users receive `403 Forbidden` on admin routes.
+
+### What was tricky
+
+- Approval needs to be atomic because it touches both `users` and `bot_credentials`.
+- Tests generate JWTs with the role stored in the DB; admin role changes must happen before token generation.
+
+### Next steps
+
+1. Commit Phase 4 profile/admin implementation.
+2. Start Phase 5 frontend scaffolding with Vite, Tailwind, Storybook, Redux Toolkit, and RTK Query.

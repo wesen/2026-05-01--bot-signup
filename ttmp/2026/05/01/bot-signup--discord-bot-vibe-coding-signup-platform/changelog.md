@@ -14,3 +14,8 @@ Created comprehensive 16-section design document covering full system architectu
 
 Implemented Phase 1-3 backend foundation: Go server scaffold, SQLite database layer with migrations and CRUD tests, bcrypt/JWT auth, signup/login/logout/me endpoints, auth middleware, and diary/task updates.
 
+
+## 2026-05-01
+
+Implemented Phase 4 profile/admin backend: profile endpoints, password change, stats, admin waitlist/users/approve/reject/suspend/update-credentials/delete routes, transactional approval, and route tests.
+
