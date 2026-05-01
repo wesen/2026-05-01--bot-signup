@@ -5,7 +5,8 @@ import { AdminUserTable } from './AdminUserTable'
 
 const users: User[] = [
   { id: 1, discord_id: '123456789012345678', display_name: 'CoolBotDev', email: 'user@example.com', status: 'waiting', role: 'user', created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
-  { id: 2, discord_id: '222456789012345678', display_name: 'BotMaster', email: 'bot@example.com', status: 'waiting', role: 'user', created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
+  { id: 2, discord_id: '222456789012345678', display_name: 'BotMaster', email: 'bot@example.com', status: 'approved', role: 'user', created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
+  { id: 3, discord_id: '333456789012345678', display_name: 'DisabledDev', email: 'disabled@example.com', status: 'suspended', role: 'user', created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
 ]
 
 const meta = {

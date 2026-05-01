@@ -11,7 +11,7 @@ const labels: Record<UserStatus, string> = {
   waiting: 'Waiting List',
   approved: 'Approved',
   rejected: 'Rejected',
-  suspended: 'Suspended',
+  suspended: 'Disabled',
 }
 
 export function StatusBadge({ status }: { status: UserStatus }) {

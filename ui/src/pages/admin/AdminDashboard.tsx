@@ -3,22 +3,30 @@ import { Link } from 'react-router-dom'
 import { useAuth } from '../../auth/useAuth'
 import { AdminStats } from '../../components/AdminStats'
 import { AdminUserTable } from '../../components/AdminUserTable'
-import { useGetStatsQuery, useGetWaitlistQuery, useRejectUserMutation } from '../../store/api'
+import { useDisableUserMutation, useGetAdminUsersQuery, useGetStatsQuery, useGetWaitlistQuery, useRejectUserMutation } from '../../store/api'
 
 export function AdminDashboard() {
   const { logout } = useAuth()
   const { data: stats, refetch: refetchStats } = useGetStatsQuery()
   const { data: waitlist, isLoading, refetch: refetchWaitlist } = useGetWaitlistQuery()
+  const { data: allUsers, isLoading: isLoadingUsers, refetch: refetchUsers } = useGetAdminUsersQuery({ page: 1, per_page: 200 })
   const [rejectUser, { isLoading: isRejecting }] = useRejectUserMutation()
+  const [disableUser, { isLoading: isDisabling }] = useDisableUserMutation()
 
   const refresh = () => {
     void refetchStats()
     void refetchWaitlist()
+    void refetchUsers()
   }
 
   const reject = async (id: number) => {
     if (!window.confirm('Reject this request?')) return
     await rejectUser(id).unwrap()
+  }
+
+  const disable = async (id: number) => {
+    if (!window.confirm('Disable this user? They will no longer have active access.')) return
+    await disableUser(id).unwrap()
   }
 
   return (
@@ -57,7 +65,24 @@ export function AdminDashboard() {
           {isLoading ? (
             <div className="rounded-2xl bg-slate-50 p-8 text-center text-slate-500">Loading waitlist…</div>
           ) : (
-            <AdminUserTable users={waitlist?.users ?? []} onReject={reject} isBusy={isRejecting} />
+            <AdminUserTable users={waitlist?.users ?? []} onReject={reject} onDisable={disable} isBusy={isRejecting || isDisabling} />
+          )}
+        </section>
+
+        <section className="mt-8 rounded-3xl border border-slate-200 bg-white/70 p-6 shadow-xl shadow-indigo-100/60 backdrop-blur">
+          <div className="mb-5 flex items-center justify-between gap-4">
+            <div>
+              <h2 className="text-2xl font-black text-slate-950">Registered Users</h2>
+              <p className="mt-1 text-sm text-slate-500">View every Discord signup and disable accounts when needed.</p>
+            </div>
+            <span className="rounded-full bg-indigo-50 px-3 py-1 text-xs font-bold text-[#5865F2]">
+              {allUsers?.total ?? 0} total
+            </span>
+          </div>
+          {isLoadingUsers ? (
+            <div className="rounded-2xl bg-slate-50 p-8 text-center text-slate-500">Loading users…</div>
+          ) : (
+            <AdminUserTable users={allUsers?.users ?? []} onDisable={disable} isBusy={isDisabling} />
           )}
         </section>
       </section>

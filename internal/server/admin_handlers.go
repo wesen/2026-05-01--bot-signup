@@ -87,8 +87,12 @@ func (s *Server) handleRejectUser(w http.ResponseWriter, r *http.Request) {
 	s.setUserStatus(w, r, database.UserStatusRejected, "User rejected")
 }
 
+func (s *Server) handleDisableUser(w http.ResponseWriter, r *http.Request) {
+	s.setUserStatus(w, r, database.UserStatusSuspended, "User disabled")
+}
+
 func (s *Server) handleSuspendUser(w http.ResponseWriter, r *http.Request) {
-	s.setUserStatus(w, r, database.UserStatusSuspended, "User suspended")
+	s.setUserStatus(w, r, database.UserStatusSuspended, "User disabled")
 }
 
 func (s *Server) handleUpdateCredentials(w http.ResponseWriter, r *http.Request) {

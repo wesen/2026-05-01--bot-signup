@@ -12,10 +12,12 @@ interface ApprovalFormProps {
   isSubmitting?: boolean
 }
 
+const defaultGuildID = import.meta.env.VITE_DEFAULT_GUILD_ID || '822583790773862470'
+
 const emptyValues: ApprovalFormValues = {
   application_id: '',
   bot_token: '',
-  guild_id: '',
+  guild_id: defaultGuildID,
   public_key: '',
 }
 

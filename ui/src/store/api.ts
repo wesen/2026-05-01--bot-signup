@@ -111,6 +111,10 @@ export const apiSlice = createApi({
       query: (id) => ({ url: `/admin/users/${id}/reject`, method: 'POST' }),
       invalidatesTags: ['User', 'Stats'],
     }),
+    disableUser: builder.mutation<{ message: string }, number>({
+      query: (id) => ({ url: `/admin/users/${id}/disable`, method: 'POST' }),
+      invalidatesTags: ['User', 'Stats'],
+    }),
     suspendUser: builder.mutation<{ message: string }, number>({
       query: (id) => ({ url: `/admin/users/${id}/suspend`, method: 'POST' }),
       invalidatesTags: ['User', 'Stats'],
@@ -132,6 +136,7 @@ export const {
   useGetAdminUsersQuery,
   useApproveUserMutation,
   useRejectUserMutation,
+  useDisableUserMutation,
   useSuspendUserMutation,
   useDeleteUserMutation,
 } = apiSlice

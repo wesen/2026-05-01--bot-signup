@@ -72,6 +72,7 @@ func (s *Server) RegisterRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("GET /api/admin/users", s.SessionMiddleware(AdminOnly(s.handleListUsers)))
 	mux.HandleFunc("POST /api/admin/users/{id}/approve", s.SessionMiddleware(AdminOnly(s.handleApproveUser)))
 	mux.HandleFunc("POST /api/admin/users/{id}/reject", s.SessionMiddleware(AdminOnly(s.handleRejectUser)))
+	mux.HandleFunc("POST /api/admin/users/{id}/disable", s.SessionMiddleware(AdminOnly(s.handleDisableUser)))
 	mux.HandleFunc("POST /api/admin/users/{id}/suspend", s.SessionMiddleware(AdminOnly(s.handleSuspendUser)))
 	mux.HandleFunc("PUT /api/admin/users/{id}/credentials", s.SessionMiddleware(AdminOnly(s.handleUpdateCredentials)))
 	mux.HandleFunc("DELETE /api/admin/users/{id}", s.SessionMiddleware(AdminOnly(s.handleDeleteUser)))

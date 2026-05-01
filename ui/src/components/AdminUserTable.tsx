@@ -1,4 +1,4 @@
-import { CheckCircle2, ExternalLink, XCircle } from 'lucide-react'
+import { Ban, CheckCircle2, ExternalLink, XCircle } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import type { User } from '../store/api'
 import { StatusBadge } from './StatusBadge'
@@ -6,10 +6,11 @@ import { StatusBadge } from './StatusBadge'
 interface AdminUserTableProps {
   users: User[]
   onReject?: (id: number) => void
+  onDisable?: (id: number) => void
   isBusy?: boolean
 }
 
-export function AdminUserTable({ users, onReject, isBusy = false }: AdminUserTableProps) {
+export function AdminUserTable({ users, onReject, onDisable, isBusy = false }: AdminUserTableProps) {
   if (users.length === 0) {
     return (
       <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-8 text-center text-slate-500">
@@ -46,9 +47,9 @@ export function AdminUserTable({ users, onReject, isBusy = false }: AdminUserTab
                     to={`/admin/users/${user.id}`}
                     className="inline-flex items-center gap-1 rounded-lg bg-[#5865F2] px-3 py-2 text-xs font-bold text-white hover:bg-[#4752C4]"
                   >
-                    <CheckCircle2 className="h-4 w-4" /> Approve
+                    <CheckCircle2 className="h-4 w-4" /> {user.status === 'waiting' ? 'Approve' : 'View'}
                   </Link>
-                  {onReject && (
+                  {onReject && user.status === 'waiting' && (
                     <button
                       type="button"
                       disabled={isBusy}
@@ -56,6 +57,16 @@ export function AdminUserTable({ users, onReject, isBusy = false }: AdminUserTab
                       className="inline-flex items-center gap-1 rounded-lg border border-slate-200 px-3 py-2 text-xs font-bold text-slate-600 hover:text-rose-600 disabled:opacity-50"
                     >
                       <XCircle className="h-4 w-4" /> Reject
+                    </button>
+                  )}
+                  {onDisable && user.status !== 'suspended' && (
+                    <button
+                      type="button"
+                      disabled={isBusy}
+                      onClick={() => onDisable(user.id)}
+                      className="inline-flex items-center gap-1 rounded-lg border border-slate-200 px-3 py-2 text-xs font-bold text-slate-600 hover:text-rose-600 disabled:opacity-50"
+                    >
+                      <Ban className="h-4 w-4" /> Disable
                     </button>
                   )}
                   <a
