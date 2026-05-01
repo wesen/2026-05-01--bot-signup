@@ -30,6 +30,10 @@ export interface ProfileResponse {
   message?: string
 }
 
+export interface SessionResponse {
+  user: User | null
+}
+
 export interface Stats {
   total_users: number
   approved_users: number
@@ -71,6 +75,10 @@ export const apiSlice = createApi({
   }),
   tagTypes: ['User', 'Stats'],
   endpoints: (builder) => ({
+    getSession: builder.query<SessionResponse, void>({
+      query: () => '/auth/session',
+      providesTags: ['User'],
+    }),
     getMe: builder.query<User, void>({
       query: () => '/auth/me',
       providesTags: ['User'],
@@ -115,6 +123,7 @@ export const apiSlice = createApi({
 })
 
 export const {
+  useGetSessionQuery,
   useGetMeQuery,
   useLogoutMutation,
   useGetProfileQuery,

@@ -1,10 +1,14 @@
 import { Bot, CalendarDays, Code2, KeyRound, Rocket, UsersRound } from 'lucide-react'
+import { Link } from 'react-router-dom'
+import { useAuth } from '../auth/useAuth'
 import { FeatureCard } from '../components/FeatureCard'
 import { SessionSignupCard } from '../components/SessionSignupCard'
+import { StatusBadge } from '../components/StatusBadge'
 import { useGetStatsQuery } from '../store/api'
 
 export function LandingPage() {
   const { data: stats } = useGetStatsQuery()
+  const { user } = useAuth()
 
   const startDiscord = () => {
     window.location.href = '/auth/discord/login?return_to=/waiting-list'
@@ -20,19 +24,9 @@ export function LandingPage() {
           VibeBot Sessions
         </a>
         <div className="flex items-center gap-6 text-sm font-medium text-slate-600">
-          <a className="hidden hover:text-[#5865F2] sm:inline" href="#about">
-            About
-          </a>
-          <a className="hidden hover:text-[#5865F2] sm:inline" href="#faq">
-            FAQ
-          </a>
-          <button
-            type="button"
-            onClick={startDiscord}
-            className="rounded-xl bg-[#5865F2] px-4 py-2 font-semibold text-white shadow-sm transition hover:bg-[#4752C4]"
-          >
-            Sign Up
-          </button>
+          <Link className="hidden hover:text-[#5865F2] sm:inline" to="/tutorial">
+            Docs
+          </Link>
         </div>
       </nav>
 
@@ -72,7 +66,7 @@ export function LandingPage() {
           )}
         </div>
 
-        <SessionSignupCard onContinueWithDiscord={startDiscord} />
+        {user ? <LoggedInStatusCard user={user} /> : <SessionSignupCard onContinueWithDiscord={startDiscord} />}
       </section>
 
       <section className="mx-auto max-w-6xl px-6 pb-16 pt-4 lg:pb-24">
@@ -96,9 +90,48 @@ export function LandingPage() {
         </div>
       </section>
 
-      <footer id="faq" className="pb-10 text-center text-sm text-slate-400">
-        Built for creators. Powered by Discord.
+      <footer className="pb-10 text-center text-sm text-slate-400">
+        Built for creators. Powered by Discord. <Link className="font-semibold text-[#5865F2] hover:text-[#4752C4]" to="/tutorial">Read the docs.</Link>
       </footer>
     </main>
+  )
+}
+
+function LoggedInStatusCard({ user }: { user: NonNullable<ReturnType<typeof useAuth>['user']> }) {
+  const statusCopy = {
+    waiting: 'You are on the waiting list. We will review your signup and approve your bot credentials soon.',
+    approved: 'You are approved. Your bot credentials and tutorial are ready.',
+    rejected: 'Your signup was not approved. Contact the organizers if this looks wrong.',
+    suspended: 'Your access is currently suspended. Contact the organizers for help.',
+  }[user.status]
+
+  const primaryLink = user.role === 'admin' ? '/admin' : user.status === 'approved' ? '/profile' : '/waiting-list'
+  const primaryLabel = user.role === 'admin' ? 'Open admin dashboard' : user.status === 'approved' ? 'View your profile' : 'View waiting list status'
+
+  return (
+    <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-2xl shadow-indigo-100/70 sm:p-8">
+      <div className="mb-6 flex items-start justify-between gap-4">
+        <div>
+          <p className="text-sm font-bold uppercase tracking-[0.2em] text-[#5865F2]">Signed in</p>
+          <h2 className="mt-2 text-2xl font-bold tracking-tight text-slate-950">Welcome, {user.display_name}</h2>
+        </div>
+        <StatusBadge status={user.status} />
+      </div>
+      <p className="text-sm leading-6 text-slate-500">{statusCopy}</p>
+      <div className="mt-6 grid gap-3">
+        <Link
+          className="inline-flex justify-center rounded-xl bg-[#5865F2] px-5 py-3 text-sm font-bold text-white shadow-sm transition hover:bg-[#4752C4]"
+          to={primaryLink}
+        >
+          {primaryLabel}
+        </Link>
+        <Link
+          className="inline-flex justify-center rounded-xl border border-slate-200 px-5 py-3 text-sm font-bold text-slate-700 transition hover:border-[#5865F2] hover:text-[#5865F2]"
+          to="/tutorial"
+        >
+          Read the docs
+        </Link>
+      </div>
+    </section>
   )
 }
