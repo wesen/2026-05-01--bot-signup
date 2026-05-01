@@ -49,7 +49,7 @@ function parseCredentialPaste(text: string): Partial<ApprovalFormValues> {
 
   for (const [field, pattern] of patterns) {
     const match = trimmed.match(pattern)
-    if (match?.[1]) values[field] = match[1].trim().replace(/^['\"]|['\"]$/g, '')
+    if (match?.[1]) values[field] = match[1].trim().replace(/^['"]|['"]$/g, '')
   }
 
   return values
