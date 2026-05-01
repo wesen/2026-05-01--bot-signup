@@ -13,7 +13,9 @@ Topics:
 DocType: design-doc
 Intent: long-term
 Owners: []
-RelatedFiles: []
+RelatedFiles:
+    - path: ttmp/2026/05/01/bot-signup--discord-bot-vibe-coding-signup-platform/sources/01-vibebot-sessions-ui-reference.png
+      note: Visual reference for the VibeBot Sessions landing page and signup card
 ExternalSources:
     - https://github.com/go-go-golems/discord-bot
 Summary: "Complete design and intern-ready implementation guide for a Discord bot vibe-coding signup platform: Go + SQLite backend, React + Vite + Tailwind frontend, waiting-list workflow, admin approval with Discord bot credentials, embedded tutorial from go-go-golems/discord-bot."
@@ -26,7 +28,7 @@ WhenToUse: "Read this before writing any code. Reference during implementation o
 
 ## 1. Executive Summary
 
-This document is the complete blueprint for the **Bot Signup Platform** — a web application where people sign up to "vibe code" their own Discord bot. The system collects their Discord identity, places them on a waiting list, lets them set a password for their account, and then gives an administrator the power to approve their request by filling in the four Discord credentials needed to run a real bot (application ID, bot token, guild ID, public key). Once approved, the user gets a profile page showing their bot status and a rich tutorial drawn from the [go-go-golems/discord-bot](https://github.com/go-go-golems/discord-bot) project.
+This document is the complete blueprint for the **Bot Signup Platform** — a web application where people sign up to "vibe code" their own Discord bot. The landing page should visually match the stored **VibeBot Sessions** reference image at `sources/01-vibebot-sessions-ui-reference.png`: clean SaaS layout, Discord-blurple/purple accent color, hero copy on the left, signup card on the right, and three "What you get" cards below. The system authenticates users through **Discord OAuth**, places approved Discord identities on a waiting list, and gives an administrator the power to approve each request by filling in the four Discord credentials needed to run a real bot (application ID, bot token, guild ID, public key). Once approved, the user gets a profile page showing their bot status and a rich tutorial drawn from the [go-go-golems/discord-bot](https://github.com/go-go-golems/discord-bot) project.
 
 The platform is a **single binary** in production: a Go web server that embeds a React + Vite + Tailwind frontend using `go:embed`. During development, you run the Go API on `:8080` and the Vite dev server on `:5173` with hot module replacement. The database is SQLite — a single file, no external database server needed.
 
@@ -42,15 +44,16 @@ The go-go-golems team runs a Discord bot runtime ([github.com/go-go-golems/disco
 
 1. A visitor arrives at the site and learns what the platform offers.
 2. The visitor signs up with their Discord ID and email.
-3. The visitor is placed on a **waiting list** and prompted to create a password.
+3. Discord OAuth creates or updates their local account and places them on a **waiting list**.
 4. An **admin** reviews the waiting list and approves users one at a time.
 5. On approval, the admin fills in the four Discord credentials that the user's bot will need.
 6. The approved user returns, logs in, sees their profile with bot status, and reads the tutorial to start coding their bot.
 
 ### Scope
 
-- **In scope**: signup, waiting list, password setup, admin approval with Discord credentials, user profile, tutorial content, API, database, frontend.
-- **Out of scope** (for now): actual bot process management, real-time bot logs, payment/billing, multi-tenant isolation of running bots, OAuth Discord login (we use manual Discord ID entry for V1).
+- **In scope**: Discord OAuth signup/login, waiting list, admin approval with Discord credentials, user profile, tutorial content, API, database, frontend.
+- **Out of scope** (for now): actual bot process management, real-time bot logs, payment/billing, multi-tenant isolation of running bots.
+- **Explicitly in scope now**: Discord OAuth login/signup is the only authentication path. There is no password signup/login and no password reset/change-password UI.
 
 ---
 
@@ -65,8 +68,8 @@ If you have never built a web application before, here is the mental model:
 │  ┌──────────────────────────┐    ┌───────────────────────────────┐  │
 │  │   React Frontend (SPA)   │    │      Go Backend (API)         │  │
 │  │                          │    │                               │  │
-│  │  - Signup page           │◄──►│  - POST /api/signup           │  │
-│  │  - Login page            │    │  - POST /api/login            │  │
+│  │  - OAuth signup CTA      │◄──►│  - GET /auth/discord/login   │  │
+│  │  - OAuth callback page    │    │  - GET /auth/discord/callback│  │
 │  │  - Waiting list page     │    │  - GET  /api/profile          │  │
 │  │  - Profile page          │    │  - GET  /api/admin/waitlist   │  │
 │  │  - Tutorial page         │    │  - POST /api/admin/approve    │  │
@@ -95,13 +98,13 @@ Reads landing page + tutorial
 Clicks "Sign Up"
     │
     ▼
-Fills in: Discord ID, Email, Display Name
+Clicks "Continue with Discord"
     │
     ▼
-Creates a Password
+Discord OAuth confirms Discord ID, username, avatar, and email
     │
     ▼
-Account created → status: "waiting"
+Local user created/updated → status: "waiting"
     │
     ▼
 Sees "You are on the waiting list" page
@@ -217,13 +220,20 @@ Here is exactly what happens when a user clicks "Sign Up":
 ```
 Browser (React)                    Go Server                      SQLite
      │                                 │                              │
-     │  POST /api/signup                │                              │
-     │  { discord_id, email, name,      │                              │
-     │    password }                    │                              │
+     │  GET /auth/discord/login       │                              │
      │─────────────────────────────────►│                              │
-     │                                 │  1. Validate input           │
-     │                                 │  2. Hash password (bcrypt)   │
-     │                                 │  3. Check discord_id unique  │
+     │                                 │  1. Create OAuth state       │
+     │                                 │  2. Redirect to Discord      │
+     │◄─────────────────────────────────│                              │
+     │  Discord OAuth authorize         │                              │
+     │───────────────────────────────────────────────────────────────►  │
+     │◄───────────────────────────────────────────────────────────────  │
+     │  GET /auth/discord/callback      │                              │
+     │  ?code=...&state=...             │                              │
+     │─────────────────────────────────►│                              │
+     │                                 │  3. Validate state           │
+     │                                 │  4. Fetch Discord identity   │
+     │                                 │  5. Upsert by discord_id     │
      │                                 │     SELECT FROM users        │
      │                                 │─────────────────────────────►│
      │                                 │◄─────────────────────────────│
@@ -231,13 +241,13 @@ Browser (React)                    Go Server                      SQLite
      │                                 │     status='waiting'         │
      │                                 │─────────────────────────────►│
      │                                 │◄─────────────────────────────│
-     │                                 │  5. Create JWT session token │
+     │                                 │  6. Create session cookie     │
      │                                 │                              │
      │  { token, user }                │                              │
      │◄─────────────────────────────────│                              │
      │                                 │                              │
-     │  Browser stores JWT in          │                              │
-     │  localStorage, redirects to     │                              │
+     │  Browser follows redirect to    │                              │
+     │  /waiting-list or /profile      │                              │
      │  /waiting-list page             │                              │
 ```
 
@@ -260,14 +270,15 @@ Key properties:
 ├──────────────────────────────────────┤
 │ id            INTEGER PRIMARY KEY     │
 │ discord_id    TEXT    UNIQUE NOT NULL │
-│ email         TEXT    UNIQUE NOT NULL │
+│ email         TEXT                     │
 │ display_name  TEXT    NOT NULL        │
-│ password_hash TEXT    NOT NULL        │
+│ avatar_url    TEXT                     │
 │ status        TEXT    DEFAULT 'waiting' │
 │               ('waiting','approved',  │
 │                'rejected','suspended') │
 │ role          TEXT    DEFAULT 'user'  │
 │               ('user','admin')        │
+│ last_login_at DATETIME                 │
 │ created_at    DATETIME NOT NULL       │
 │ updated_at    DATETIME NOT NULL       │
 └──────────────┬───────────────────────┘
@@ -299,18 +310,19 @@ The file `internal/database/migrations/001_initial.sql` contains:
 CREATE TABLE IF NOT EXISTS users (
     id            INTEGER PRIMARY KEY AUTOINCREMENT,
     discord_id    TEXT    UNIQUE NOT NULL,
-    email         TEXT    UNIQUE NOT NULL,
+    email         TEXT    UNIQUE,
     display_name  TEXT    NOT NULL,
-    password_hash TEXT    NOT NULL,
+    avatar_url    TEXT,
     status        TEXT    NOT NULL DEFAULT 'waiting'
                   CHECK(status IN ('waiting','approved','rejected','suspended')),
     role          TEXT    NOT NULL DEFAULT 'user'
                   CHECK(role IN ('user','admin')),
+    last_login_at TEXT,
     created_at    TEXT    NOT NULL DEFAULT (datetime('now')),
     updated_at    TEXT    NOT NULL DEFAULT (datetime('now'))
 );
 
--- Index for fast lookup by discord_id (used in signup/login)
+-- Index for fast lookup by discord_id (used in OAuth callback)
 CREATE INDEX IF NOT EXISTS idx_users_discord_id ON users(discord_id);
 CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
 CREATE INDEX IF NOT EXISTS idx_users_status ON users(status);
@@ -374,7 +386,7 @@ func Open(path string) (*DB, error) {
 Every database operation lives in a Go function on the `*DB` struct. For example:
 
 ```go
-func (db *DB) CreateUser(ctx context.Context, discordID, email, displayName, passwordHash string) (*User, error) {
+func (db *DB) UpsertDiscordUser(ctx context.Context, discordID, email, displayName, avatarURL string) (*User, error) {
     // ...
 }
 
@@ -389,75 +401,56 @@ All API endpoints live under `/api/`. They accept and return JSON. The Go server
 
 ### 6.1 Authentication endpoints
 
-#### `POST /api/auth/signup`
+Discord OAuth is the only signup/login path. There are no password endpoints and no manual Discord ID signup form.
 
-Creates a new user account. The user starts with `status='waiting'`.
+#### `GET /auth/discord/login`
 
-**Request body:**
-```json
-{
-  "discord_id": "123456789012345678",
-  "email": "user@example.com",
-  "display_name": "CoolBotDev",
-  "password": "my-secure-password"
-}
+Starts Discord OAuth. This is a browser navigation endpoint, not a JSON API endpoint.
+
+**Query parameters:**
+- `return_to` (optional): origin-relative path to return to after auth, e.g. `/profile` or `/waiting-list`.
+
+**Server behavior:**
+1. Generate a cryptographically random `state` value.
+2. Store `state` and `return_to` in a short-lived, HTTP-only cookie or an `oauth_states` table.
+3. Redirect to Discord's authorize URL with scopes `identify email`.
+
+**Discord authorize URL shape:**
+```text
+https://discord.com/oauth2/authorize
+  ?client_id=<DISCORD_CLIENT_ID>
+  &redirect_uri=<DISCORD_REDIRECT_URL>
+  &response_type=code
+  &scope=identify%20email
+  &state=<random-state>
 ```
-
-**Success response (201):**
-```json
-{
-  "token": "eyJhbGciOiJIUzI1NiIs...",
-  "user": {
-    "id": 1,
-    "discord_id": "123456789012345678",
-    "email": "user@example.com",
-    "display_name": "CoolBotDev",
-    "status": "waiting",
-    "role": "user"
-  }
-}
-```
-
-**Validation rules:**
-- `discord_id`: required, must be a numeric string (Discord snowflake ID)
-- `email`: required, must be a valid email format
-- `display_name`: required, 2–50 characters
-- `password`: required, minimum 8 characters
-
-**Error responses:**
-- `400 Bad Request` — validation failure, with specific field errors
-- `409 Conflict` — discord_id or email already registered
 
 ---
 
-#### `POST /api/auth/login`
+#### `GET /auth/discord/callback`
 
-Authenticates an existing user and returns a JWT token.
+Completes Discord OAuth. This is also a browser navigation endpoint.
 
-**Request body:**
-```json
-{
-  "email": "user@example.com",
-  "password": "my-secure-password"
-}
-```
+**Query parameters from Discord:**
+- `code`
+- `state`
 
-**Success response (200):**
-```json
-{
-  "token": "eyJhbGciOiJIUzI1NiIs...",
-  "user": { ... }
-}
-```
+**Server behavior:**
+1. Validate the `state` value against the stored state.
+2. Exchange `code` for an access token at `https://discord.com/api/oauth2/token`.
+3. Fetch the Discord user from `https://discord.com/api/users/@me`.
+4. Upsert the local user by `discord_id`.
+5. If this is a first login, create the user with `status='waiting'`.
+6. Create a signed HTTP-only same-site session cookie.
+7. Redirect to `return_to` or to `/waiting-list` for new waiting users.
 
-**Error responses:**
-- `401 Unauthorized` — invalid email or password
+**Recommended for this app:** use HTTP-only same-site session cookies. Do not put OAuth tokens or local session tokens in URLs or localStorage.
 
 ---
 
 #### `POST /api/auth/logout`
 
-Invalidates the current session (client-side: delete the JWT from localStorage).
+Invalidates the current HTTP-only session cookie. The server clears the cookie; the frontend clears in-memory user state and RTK Query cache.
 
 **Response (200):** `{ "message": "logged out" }`
 
@@ -465,7 +458,7 @@ Invalidates the current session (client-side: delete the JWT from localStorage).
 
 #### `GET /api/auth/me`
 
-Returns the currently authenticated user's profile. Requires a valid JWT in the `Authorization: Bearer <token>` header.
+Returns the currently authenticated user's profile. Requires a valid signed session cookie.
 
 **Success response (200):**
 ```json
@@ -530,23 +523,9 @@ Updates the current user's display name or email. Requires auth.
 
 ---
 
-#### `PUT /api/profile/password`
-
-Changes the user's password. Requires the current password for verification.
-
-**Request body:**
-```json
-{
-  "current_password": "old-password",
-  "new_password": "new-secure-password"
-}
-```
-
-**Success response (200):** `{ "message": "password updated" }`
-
 ### 6.3 Admin endpoints
 
-All admin endpoints require a JWT for a user with `role='admin'`. If a non-admin calls these, the server returns `403 Forbidden`.
+All admin endpoints require an authenticated session for a user with `role='admin'`. If a non-admin calls these, the server returns `403 Forbidden`.
 
 #### `GET /api/admin/waitlist`
 
@@ -690,11 +669,10 @@ The frontend is a **Single Page Application (SPA)**. The browser loads `index.ht
 
 ```
 /                     → Landing page (hero + features + CTA to sign up)
-/signup               → Signup form (discord_id, email, name, password)
-/login                → Login form (email, password)
+/auth/callback        → OAuth callback handoff/status page
+/                     → Landing page CTA navigates to /auth/discord/login
 /waiting-list         → "You're on the waiting list" status page
 /profile              → User profile + bot credentials (if approved)
-/profile/password     → Change password form
 /tutorial             → Discord bot tutorial (from go-go-golems/discord-bot)
 /admin                → Admin dashboard (requires admin role)
 /admin/waitlist       → Waiting-list management
@@ -714,7 +692,7 @@ Layout (Tailwind classes as mental model):
 
 ```
 ┌───────────────────────────────────────────────────────────┐
-│  Navbar: [Logo] [Tutorial] [Login] [Sign Up]              │
+│  Navbar: [Logo] [About] [FAQ] [Sign Up]                   │
 ├───────────────────────────────────────────────────────────┤
 │                                                           │
 │  Hero Section (bg-gradient, dark theme)                   │
@@ -753,9 +731,9 @@ Layout (Tailwind classes as mental model):
   - `StatsBar`
   - `Footer`
 
-### 7.3 Signup page (`/signup`)
+### 7.3 Signup card (on `/`) 
 
-A clean form that collects Discord ID, email, display name, and password.
+The reference image shows signup as a card on the landing page, not as a separate password form. The card collects a lightweight name/email interest signal if desired, but the actual identity action is a Discord OAuth button.
 
 ```
 ┌────────────────────────────────────────────┐
@@ -779,55 +757,40 @@ A clean form that collects Discord ID, email, display name, and password.
 │  │ CoolBotDev                           │  │
 │  └──────────────────────────────────────┘  │
 │                                            │
-│  Password (min 8 chars)                    │
-│  ┌──────────────────────────────────────┐  │
-│  │ ••••••••                             │  │
-│  └──────────────────────────────────────┘  │
+│  [Continue with Discord]                   │
 │                                            │
-│  [Create Account]                          │
-│                                            │
-│  Already have an account? [Log in]         │
+│  Uses Discord OAuth — no password needed.  │
 └────────────────────────────────────────────┘
 ```
 
 **Key UX details:**
-- The Discord ID field has a helper tooltip explaining how to find it
-- Password field has a show/hide toggle
-- Form validates in real-time (client-side) before submitting
-- On success, the user is redirected to `/waiting-list`
-- On error (e.g., duplicate Discord ID), the form shows the error inline
+- OAuth button navigates to `/auth/discord/login?return_to=/waiting-list`
+- The card visually matches the reference image: white rounded panel, icon-prefixed inputs if optional name/email capture remains, purple full-width CTA
+- On OAuth success, the user is redirected to `/waiting-list`
+- On OAuth error, show a friendly retry message and a link back to the landing page
 
 **React component tree:**
-- `SignupPage`
-  - `SignupForm`
-    - `FormField` (reusable) × 4
-    - `DiscordIDHelper` (tooltip/info box)
+- `LandingPage`
+  - `SessionSignupCard`
+    - `FormField` (optional name/email interest capture)
+    - `DiscordOAuthButton`
 
-### 7.4 Login page (`/login`)
+### 7.4 OAuth callback page (`/auth/callback`)
 
-Simple email + password form.
+A short-lived transition page shown only if the OAuth callback needs frontend handoff. With server-side HTTP-only sessions, Discord redirects straight to `/waiting-list`, `/profile`, or `/admin`, so this page can simply show "Signing you in..." and call `/api/auth/me`.
 
 ```
 ┌────────────────────────────────────────────┐
-│  Welcome Back                              │
+│  Signing you in with Discord...            │
 │                                            │
-│  Email                                     │
-│  ┌──────────────────────────────────────┐  │
-│  │ you@example.com                      │  │
-│  └──────────────────────────────────────┘  │
+│  [spinner]                                 │
 │                                            │
-│  Password                                  │
-│  ┌──────────────────────────────────────┐  │
-│  │ ••••••••                             │  │
-│  └──────────────────────────────────────┘  │
-│                                            │
-│  [Log In]                                  │
-│                                            │
-│  Don't have an account? [Sign up]          │
+│  If this takes too long, return home and   │
+│  try Continue with Discord again.          │
 └────────────────────────────────────────────┘
 ```
 
-After login, the user is redirected based on their status:
+After OAuth login, the user is redirected based on their status:
 - `waiting` → `/waiting-list`
 - `approved` → `/profile`
 - `rejected` → `/waiting-list` (shows rejection message)
@@ -872,7 +835,7 @@ This is what approved users see. It shows their account details and **all four D
 │  │  Discord ID: 123456789012345678                   │ │
 │  │  Email:      user@example.com                     │ │
 │  │  Status:     ✅ Approved                          │ │
-│  │  [Edit Profile]  [Change Password]                │ │
+│  │  [Edit Profile]                                    │ │
 │  └──────────────────────────────────────────────────┘ │
 │                                                         │
 │  ┌─ Bot Credentials ────────────────────────────────┐ │
@@ -1018,10 +981,10 @@ These components are reused across pages:
 |---|---|---|
 | `Navbar` | Every page | Navigation bar with auth-aware links |
 | `Footer` | Every page | Links to GitHub, copyright |
-| `FormField` | Signup, Login, Profile, Admin | Label + input + error message |
+| `FormField` | Optional signup card, Profile, Admin | Label + input + error message |
 | `StatusBadge` | Profile, Admin | Colored pill showing user status |
 | `CredentialCard` | Profile | Displays one credential field with copy/mask |
-| `ProtectedRoute` | All auth-required pages | Redirects to /login if no JWT |
+| `ProtectedRoute` | All auth-required pages | Redirects to `/auth/discord/login` if no session |
 | `AdminRoute` | All admin pages | Redirects to / if user is not admin |
 | `ErrorBoundary` | App root | Catches React rendering errors gracefully |
 
@@ -1045,118 +1008,100 @@ Example button:
 
 ### 8.1 How authentication works
 
-The platform uses **JSON Web Tokens (JWT)** for authentication. Here is the flow:
+The platform uses **Discord OAuth as the primary identity provider**. The local app still keeps a `users` table because it needs local waiting-list status, admin role, and bot credential assignment, but the user's Discord identity comes from Discord, not from manual form entry.
 
-```
-1. User submits email + password to POST /api/auth/login
-2. Server verifies password against bcrypt hash in database
-3. Server generates a JWT containing: { user_id, role, exp }
-4. Server returns the JWT to the browser
-5. Browser stores the JWT in localStorage
-6. Every subsequent API request includes: Authorization: Bearer <token>
-7. Server middleware validates the JWT signature and expiry
-8. If valid, the handler receives the user_id and role in the request context
-```
+Primary production flow:
 
-### 8.2 Why JWT (and not sessions)?
-
-| Aspect | JWT | Server sessions |
-|---|---|---|
-| Server state | Stateless — no session store needed | Server must store session data |
-| Scaling | Easy — any server instance can validate | Requires shared session store (Redis, DB) |
-| Mobile-friendly | Yes — just send the token | Cookies can be tricky on mobile |
-| Logout | Client-side delete (or short expiry) | Server destroys session |
-
-For our single-server, SQLite-backed app, JWT is the simpler choice. We use **short-lived tokens** (24 hours) to limit the damage if a token is stolen.
-
-### 8.3 Password storage
-
-Passwords are **never stored in plain text**. We use bcrypt with a cost factor of 12:
-
-```go
-import "golang.org/x/crypto/bcrypt"
-
-// Hashing a password on signup
-hash, err := bcrypt.GenerateFromPassword([]byte(password), 12)
-
-// Verifying a password on login
-err := bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(inputPassword))
+```text
+1. User clicks "Continue with Discord" on the VibeBot Sessions signup card.
+2. Browser navigates to GET /auth/discord/login?return_to=/waiting-list.
+3. Server creates an OAuth state value and redirects to Discord authorize URL.
+4. User approves the app in Discord.
+5. Discord redirects to GET /auth/discord/callback?code=...&state=...
+6. Server validates state, exchanges code for token, and fetches /users/@me.
+7. Server upserts local user by Discord snowflake ID.
+8. New users start with status='waiting'; existing users keep their status.
+9. Server creates a signed HTTP-only session cookie and redirects back to the frontend.
+10. Frontend uses RTK Query /api/auth/me to load current user and route to waiting list/profile/admin.
 ```
 
-**Why bcrypt?** It is designed specifically for passwords. It is slow (by design), which makes brute-force attacks expensive. The cost factor of 12 means each hash takes ~250ms — fast enough for logins, slow enough to defeat attackers.
+There is no password login. First-admin bootstrap should be a CLI/database role assignment for a Discord-authenticated user.
 
-### 8.4 JWT implementation in Go
+### 8.2 Discord OAuth configuration, modeled after Pyxis
 
-We use the `github.com/golang-jwt/jwt/v5` package:
+The Pyxis production notes use Discord OAuth with exact redirect URL matching, a bot installed in the configured guild for role/member lookups, and a clear warning that OAuth fails with `Unknown Guild` when the bot cannot see the server. Reuse that operational pattern here.
 
-```go
-import (
-    "time"
-    "github.com/golang-jwt/jwt/v5"
-)
+Required environment variables:
 
-type Claims struct {
-    UserID int    `json:"user_id"`
-    Role   string `json:"role"`
-    jwt.RegisteredClaims
-}
-
-func GenerateToken(userID int, role string, secret []byte) (string, error) {
-    claims := Claims{
-        UserID: userID,
-        Role:   role,
-        RegisteredClaims: jwt.RegisteredClaims{
-            ExpiresAt: jwt.NewNumericDate(time.Now().Add(24 * time.Hour)),
-            IssuedAt:  jwt.NewNumericDate(time.Now()),
-            Issuer:    "bot-signup",
-        },
-    }
-    token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-    return token.SignedString(secret)
-}
+```text
+DISCORD_CLIENT_ID=...
+DISCORD_CLIENT_SECRET=...
+DISCORD_REDIRECT_URL=https://<host>/auth/discord/callback
+DISCORD_GUILD_ID=...              # optional for V1 unless we gate signup by guild membership
+DISCORD_BOT_TOKEN=...             # optional unless checking guild membership/roles
+SESSION_SECRET=...                # required for signed HTTP-only session cookies
+PUBLIC_URL=https://<host>
 ```
 
-### 8.5 Auth middleware
+Discord Developer Portal setup:
+
+1. Create or reuse a Discord application.
+2. Add redirect URL exactly matching `DISCORD_REDIRECT_URL`.
+3. If the app checks guild membership, install the bot into the target guild.
+4. If member/role lookup fails even after install, enable **Server Members Intent** in the Developer Portal.
+5. Keep `identify email` as the base OAuth scopes. Add `guilds` only if the UI needs to show the user's guild list.
+
+Pyxis lesson to preserve: route prefixes and OAuth return paths must agree. If the React app is served at `/`, `return_to=/waiting-list` is fine. If a future admin app is served under `/admin-app`, return paths must include that external prefix because the OAuth callback redirects at the origin level, outside React Router basename context.
+
+### 8.3 Why session cookies (not JWT in localStorage)?
+
+For OAuth browser apps, HTTP-only same-site cookies are safer and simpler than storing JWTs in localStorage. JavaScript cannot read HTTP-only cookies, which reduces token theft risk from XSS. The backend reads the session cookie, loads the user, and RTK Query calls same-origin APIs with `credentials: "include"`.
+
+Cookie requirements:
+
+- `HttpOnly` so browser JavaScript cannot read the session.
+- `SameSite=Lax` so Discord OAuth redirects back with the cookie context intact while reducing CSRF risk.
+- `Secure` in production.
+- Short-ish expiry, e.g. 7 days, with logout clearing the cookie.
+
+### 8.4 Session middleware
 
 Every route that requires authentication passes through middleware that:
-1. Reads the `Authorization` header
-2. Strips the `Bearer ` prefix
-3. Parses and validates the JWT
-4. Injects `user_id` and `role` into the request context
+
+1. Reads the signed session cookie.
+2. Verifies the cookie signature using `SESSION_SECRET`.
+3. Extracts the local user ID.
+4. Loads the user from SQLite.
+5. Injects `user_id` and `role` into request context.
 
 ```go
-func AuthMiddleware(secret []byte, next http.HandlerFunc) http.HandlerFunc {
+func (s *Server) SessionMiddleware(next http.HandlerFunc) http.HandlerFunc {
     return func(w http.ResponseWriter, r *http.Request) {
-        authHeader := r.Header.Get("Authorization")
-        if authHeader == "" {
-            http.Error(w, `{"error":"missing authorization header"}`, http.StatusUnauthorized)
+        session, err := s.sessions.Read(r)
+        if err != nil {
+            respondError(w, http.StatusUnauthorized, "not authenticated")
             return
         }
-        tokenStr := strings.TrimPrefix(authHeader, "Bearer ")
-        claims := &Claims{}
-        token, err := jwt.ParseWithClaims(tokenStr, claims, func(t *jwt.Token) (interface{}, error) {
-            return secret, nil
-        })
-        if err != nil || !token.Valid {
-            http.Error(w, `{"error":"invalid token"}`, http.StatusUnauthorized)
+        user, err := s.db.GetUserByID(r.Context(), session.UserID)
+        if err != nil {
+            respondError(w, http.StatusUnauthorized, "not authenticated")
             return
         }
-        // Inject user info into context
-        ctx := context.WithValue(r.Context(), ctxKeyUserID, claims.UserID)
-        ctx = context.WithValue(ctx, ctxKeyUserRole, claims.Role)
+        ctx := context.WithValue(r.Context(), ctxKeyUserID, user.ID)
+        ctx = context.WithValue(ctx, ctxKeyUserRole, string(user.Role))
         next.ServeHTTP(w, r.WithContext(ctx))
     }
 }
+```
 
-func AdminOnly(next http.HandlerFunc) http.HandlerFunc {
-    return func(w http.ResponseWriter, r *http.Request) {
-        role := r.Context().Value(ctxKeyUserRole).(string)
-        if role != "admin" {
-            http.Error(w, `{"error":"forbidden"}`, http.StatusForbidden)
-            return
-        }
-        next.ServeHTTP(w, r)
-    }
+### 8.5 Logout
+
+Logout is a server-side cookie clearing operation:
+
+```go
+func (s *Server) handleLogout(w http.ResponseWriter, r *http.Request) {
+    s.sessions.Clear(w)
+    respondJSON(w, http.StatusOK, map[string]string{"message": "logged out"})
 }
 ```
 
@@ -1192,42 +1137,28 @@ export const apiSlice = createApi({
   reducerPath: 'api',
   baseQuery: fetchBaseQuery({
     baseUrl: '/api',
-    prepareHeaders: (headers) => {
-      const token = localStorage.getItem('token')
-      if (token) {
-        headers.set('Authorization', `Bearer ${token}`)
-      }
-      return headers
-    },
+    credentials: 'include', // send the HTTP-only session cookie
   }),
   tagTypes: ['User', 'Profile', 'Waitlist', 'Credentials'],
   endpoints: (builder) => ({
-    // Auth
-    signup: builder.mutation<SignupResponse, SignupRequest>({
-      query: (body) => ({ url: '/auth/signup', method: 'POST', body }),
-    }),
-    login: builder.mutation<LoginResponse, LoginRequest>({
-      query: (body) => ({ url: '/auth/login', method: 'POST', body }),
-    }),
     getMe: builder.query<User, void>({
       query: () => '/auth/me',
       providesTags: ['User'],
     }),
+    logout: builder.mutation<void, void>({
+      query: () => ({ url: '/auth/logout', method: 'POST' }),
+      invalidatesTags: ['User', 'Profile'],
+    }),
 
-    // Profile
     getProfile: builder.query<ProfileResponse, void>({
       query: () => '/profile',
       providesTags: ['Profile', 'Credentials'],
     }),
     updateProfile: builder.mutation<User, Partial<User>>({
       query: (body) => ({ url: '/profile', method: 'PUT', body }),
-      invalidatesTags: ['Profile'],
-    }),
-    changePassword: builder.mutation<void, ChangePasswordRequest>({
-      query: (body) => ({ url: '/profile/password', method: 'PUT', body }),
+      invalidatesTags: ['Profile', 'User'],
     }),
 
-    // Admin
     getWaitlist: builder.query<{ users: User[] }, void>({
       query: () => '/admin/waitlist',
       providesTags: ['Waitlist'],
@@ -1236,7 +1167,7 @@ export const apiSlice = createApi({
       query: (params) => ({ url: '/admin/users', params }),
       providesTags: ['Waitlist'],
     }),
-    approveUser: builder.mutation<ApproveResponse, ApproveRequest>({  
+    approveUser: builder.mutation<ApproveResponse, ApproveRequest>({
       query: ({ id, ...body }) => ({ url: `/admin/users/${id}/approve`, method: 'POST', body }),
       invalidatesTags: ['Waitlist', 'Profile'],
     }),
@@ -1256,25 +1187,17 @@ export const apiSlice = createApi({
       query: (id) => ({ url: `/admin/users/${id}`, method: 'DELETE' }),
       invalidatesTags: ['Waitlist'],
     }),
-
-    // Public
     getStats: builder.query<Stats, void>({
       query: () => '/stats',
-    }),
-    getHealth: builder.query<Health, void>({
-      query: () => '/health',
     }),
   }),
 })
 
-// Auto-generated hooks: useSignupMutation, useLoginMutation, useGetProfileQuery, etc.
 export const {
-  useSignupMutation,
-  useLoginMutation,
   useGetMeQuery,
+  useLogoutMutation,
   useGetProfileQuery,
   useUpdateProfileMutation,
-  useChangePasswordMutation,
   useGetWaitlistQuery,
   useGetAdminUsersQuery,
   useApproveUserMutation,
@@ -1286,44 +1209,20 @@ export const {
 } = apiSlice
 ```
 
-**Using RTK Query hooks in a component:**
-
-```tsx
-// Example: ProfilePage.tsx
-function ProfilePage() {
-  // RTK Query gives us data, isLoading, error, and refetch automatically
-  const { data, isLoading, error } = useGetProfileQuery()
-  const [updateProfile] = useUpdateProfileMutation()
-
-  if (isLoading) return <LoadingSpinner />
-  if (error) return <div>Failed to load profile</div>
-
-  return (
-    <div>
-      <h1>Welcome, {data.user.display_name}</h1>
-      {data.bot_credentials && <CredentialCard credential={data.bot_credentials} />}
-    </div>
-  )
-}
-```
-
-**Auth context still handles token storage and redirect logic**, but delegates all API calls to RTK Query:
+**Auth context handles current-user routing and Discord OAuth navigation**, while API calls go through RTK Query:
 
 ```tsx
 function AuthProvider({ children }) {
-  const [loginMutation] = useLoginMutation()
-  const [signupMutation] = useSignupMutation()
+  const { data: me } = useGetMeQuery()
+  const [logoutMutation] = useLogoutMutation()
 
-  const login = async (email: string, password: string) => {
-    const res = await loginMutation({ email, password }).unwrap()
-    localStorage.setItem('token', res.token)
-    setUser(res.user)
+  const loginWithDiscord = (returnTo = '/waiting-list') => {
+    window.location.href = `/auth/discord/login?return_to=${encodeURIComponent(returnTo)}`
   }
 
-  const signup = async (data: SignupData) => {
-    const res = await signupMutation(data).unwrap()
-    localStorage.setItem('token', res.token)
-    setUser(res.user)
+  const logout = async () => {
+    await logoutMutation().unwrap()
+    setUser(null)
   }
 
   // ...
@@ -1332,9 +1231,9 @@ function AuthProvider({ children }) {
 
 ### 8.7 Security checklist
 
-- [x] Passwords hashed with bcrypt (cost 12)
-- [x] JWT tokens expire after 24 hours
-- [x] JWT secret loaded from environment variable (never hard-coded)
+- [x] Discord OAuth is the only login/signup path
+- [x] Session cookies are HTTP-only, SameSite=Lax, and Secure in production
+- [x] Session secret loaded from environment variable (never hard-coded)
 - [x] HTTPS enforced in production
 - [x] Bot tokens stored in database (never logged or exposed in error messages)
 - [x] Admin routes protected with role check middleware
@@ -1351,10 +1250,10 @@ The first admin is created manually — either via a CLI command or by inserting
 
 ```bash
 # Option A: CLI command
-./bot-signup admin create --email admin@example.com --password secret123
+./bot-signup admin promote --discord-id 123456789012345678
 
 # Option B: Direct SQL (for development)
-sqlite3 data/bot-signup.db "UPDATE users SET role='admin' WHERE email='admin@example.com'"
+sqlite3 data/bot-signup.db "UPDATE users SET role='admin' WHERE discord_id='123456789012345678'"
 ```
 
 Only users with `role='admin'` can access `/api/admin/*` endpoints.
@@ -1671,8 +1570,8 @@ bot-signup/
 │   │   └── helpers.go                # respondJSON, respondError utilities
 │   │
 │   ├── auth/
-│   │   ├── jwt.go                    # JWT generation and parsing
-│   │   └── password.go               # bcrypt hashing and verification
+│   │   ├── discord_oauth.go          # Discord OAuth config, exchange, user fetch
+│   │   └── sessions.go               # Signed HTTP-only session cookies
 │   │
 │   └── web/
 │       ├── embed.go                  # //go:build embed — embeds the frontend FS
@@ -1703,20 +1602,18 @@ bot-signup/
 │       ├── store/
 │       │   ├── store.ts              # Redux store setup (configureStore + api middleware)
 │       │   ├── api.ts                # RTK Query API slice (all endpoints + auto hooks)
-│       │   └── authSlice.ts           # Auth state slice (user, token, login/logout actions)
+│       │   └── authSlice.ts           # Auth state slice (current user only; no token storage)
 │       │
 │       ├── auth/
-│       │   ├── AuthContext.tsx        # React context: login/logout/signup using RTK Query hooks
-│       │   ├── useAuth.ts            # Hook: user, token, login, logout, signup
-│       │   └── ProtectedRoute.tsx     # Redirects to /login if not authenticated
+│       │   ├── AuthContext.tsx        # React context: current user + Discord OAuth login/logout helpers
+│       │   ├── useAuth.ts            # Hook: user, loginWithDiscord, logout
+│       │   └── ProtectedRoute.tsx     # Redirects to /auth/discord/login if not authenticated
 │       │
 │       ├── pages/
 │       │   ├── LandingPage.tsx        # / — hero, features, stats
-│       │   ├── SignupPage.tsx         # /signup — signup form
-│       │   ├── LoginPage.tsx          # /login — login form
+│       │   ├── AuthCallbackPage.tsx   # /auth/callback — optional OAuth handoff/status page
 │       │   ├── WaitingListPage.tsx    # /waiting-list — status display
 │       │   ├── ProfilePage.tsx        # /profile — user info + credentials
-│       │   ├── ChangePasswordPage.tsx  # /profile/password
 │       │   ├── TutorialPage.tsx       # /tutorial — rendered markdown
 │       │   ├── NotFoundPage.tsx       # /* — 404 page
 │       │   └── admin/
@@ -1741,8 +1638,7 @@ bot-signup/
 │       │   ├── StatusBadge.stories.tsx
 │       │   ├── CredentialCard.stories.tsx
 │       │   ├── LoadingSpinner.stories.tsx
-│       │   ├── SignupForm.stories.tsx
-│       │   ├── LoginForm.stories.tsx
+│       │   ├── SessionSignupCard.stories.tsx
 │       │   ├── WaitingListStatus.stories.tsx
 │       │   ├── ProfileCard.stories.tsx
 │       │   ├── AdminUserTable.stories.tsx
@@ -1775,9 +1671,9 @@ If you are new to the project, read files in this order:
 | 2 | `internal/server/server.go` | The HTTP server. Shows every route registration. |
 | 3 | `internal/database/database.go` | Database initialization and migration. |
 | 4 | `internal/database/users.go` | User CRUD — the core data layer. |
-| 5 | `internal/server/auth_handlers.go` | Signup and login logic — the main user flow. |
+| 5 | `internal/server/auth_handlers.go` | Discord OAuth login/callback/logout/me logic — the main user flow. |
 | 6 | `ui/src/App.tsx` | Frontend routing and auth context setup. |
-| 7 | `ui/src/pages/SignupPage.tsx` | The signup form — typical React page pattern. |
+| 7 | `ui/src/components/SessionSignupCard.tsx` | The reference-image signup card and Discord OAuth CTA. |
 
 ## 12. Implementation Phases — What to Build and In What Order
 
@@ -1815,7 +1711,7 @@ go.mod
    - Runs migrations from embedded SQL files
 3. Create `internal/database/migrations/001_initial.sql` with the schema from Section 5.3
 4. Create `internal/database/users.go` with functions:
-   - `CreateUser(ctx, discordID, email, displayName, passwordHash) (*User, error)`
+   - `UpsertDiscordUser(ctx, discordID, email, displayName, avatarURL) (*User, error)`
    - `GetUserByID(ctx, id) (*User, error)`
    - `GetUserByEmail(ctx, email) (*User, error)`
    - `GetUserByDiscordID(ctx, discordID) (*User, error)`
@@ -1842,39 +1738,24 @@ internal/database/credentials_test.go
 
 ### Phase 3: Authentication (Day 2–3)
 
-**Goal**: Signup and login endpoints work, returning JWTs.
+**Goal**: Discord OAuth login/callback/logout/me endpoints work with signed HTTP-only sessions.
 
 **Steps:**
-1. Add `golang.org/x/crypto` (bcrypt) and `github.com/golang-jwt/jwt/v5` dependencies
-2. Create `internal/auth/password.go` with `HashPassword()` and `CheckPassword()`
-3. Create `internal/auth/jwt.go` with `GenerateToken()` and `ParseToken()`
+1. Add `golang.org/x/oauth2` dependency
+2. Create `internal/auth/discord_oauth.go` for Discord OAuth config, code exchange, and user fetch
+3. Create `internal/auth/sessions.go` for signed HTTP-only session cookies
 4. Create `internal/server/middleware.go` with `AuthMiddleware()` and `AdminOnly()`
 5. Create `internal/server/auth_handlers.go` with:
-   - `POST /api/auth/signup` — validates input, hashes password, creates user, returns JWT
-   - `POST /api/auth/login` — checks password, returns JWT
+   - `GET /auth/discord/login` — creates state and redirects to Discord
+   - `GET /auth/discord/callback` — validates state, exchanges code, upserts user, sets session cookie
    - `POST /api/auth/logout` — returns success (client deletes token)
    - `GET /api/auth/me` — returns current user (requires auth)
-6. Test with `curl`:
-   ```bash
-   # Signup
-   curl -X POST http://localhost:8080/api/auth/signup \
-     -H 'Content-Type: application/json' \
-     -d '{"discord_id":"123","email":"test@test.com","display_name":"Test","password":"password123"}'
-
-   # Login
-   curl -X POST http://localhost:8080/api/auth/login \
-     -H 'Content-Type: application/json' \
-     -d '{"email":"test@test.com","password":"password123"}'
-
-   # Get profile (use token from login response)
-   curl http://localhost:8080/api/auth/me \
-     -H 'Authorization: Bearer <token>'
-   ```
+6. Test by opening `/auth/discord/login?return_to=/waiting-list` in a browser with Discord OAuth env vars configured.
 
 **Files created:**
 ```
-internal/auth/password.go
-internal/auth/jwt.go
+internal/auth/discord_oauth.go
+internal/auth/sessions.go
 internal/server/middleware.go
 internal/server/auth_handlers.go
 ```
@@ -1889,7 +1770,6 @@ internal/server/auth_handlers.go
 1. Create `internal/server/profile_handlers.go`:
    - `GET /api/profile` — returns user + credentials (if approved)
    - `PUT /api/profile` — update display name / email
-   - `PUT /api/profile/password` — change password
 2. Create `internal/server/admin_handlers.go`:
    - `GET /api/admin/waitlist` — list waiting users
    - `GET /api/admin/users` — list all users (paginated)
@@ -1969,17 +1849,15 @@ internal/server/admin_handlers.go
    import { createSlice } from '@reduxjs/toolkit'
    const authSlice = createSlice({
      name: 'auth',
-     initialState: { user: null, token: localStorage.getItem('token') },
+     initialState: { user: null },
      reducers: {
        setCredentials: (state, action) => {
          state.user = action.payload.user
-         state.token = action.payload.token
-         localStorage.setItem('token', action.payload.token)
+         // no browser-readable token is stored
        },
        logout: (state) => {
          state.user = null
-         state.token = null
-         localStorage.removeItem('token')
+         // session cookie is cleared by POST /api/auth/logout
        },
      },
    })
@@ -2040,7 +1918,7 @@ ui/src/pages/LandingPage.tsx
 **Goal**: Signup, login, and auth context work end-to-end using RTK Query mutations.
 
 **Steps:**
-1. Create `ui/src/auth/AuthContext.tsx` — uses `useLoginMutation` and `useSignupMutation` from RTK Query, dispatches `setCredentials`/`logout` to the auth slice
+1. Create `ui/src/auth/AuthContext.tsx` — uses `useGetMeQuery` and `useLogoutMutation`, and exposes `loginWithDiscord()` navigation
 2. Create `ui/src/auth/ProtectedRoute.tsx` — route guard component
 3. Create `FormField.tsx` reusable component:
    ```tsx
@@ -2054,38 +1932,31 @@ ui/src/pages/LandingPage.tsx
      hint?: string
    }
    ```
-4. **Create `FormField.stories.tsx`** — stories for default, with-error, with-hint, password type:
+4. **Create `FormField.stories.tsx`** — stories for default, with-error, and with-hint states:
    ```tsx
    export const Default: Story = { args: { label: 'Email', value: '' } }
    export const WithError: Story = { args: { label: 'Email', value: 'bad', error: 'Invalid email' } }
-   export const Password: Story = { args: { label: 'Password', type: 'password' } }
    ```
-5. Create `SignupPage.tsx` using `useSignupMutation()`:
+5. Create `SessionSignupCard.tsx` with a `Continue with Discord` CTA:
    ```tsx
-   const [signup, { isLoading, error }] = useSignupMutation()
-   const handleSubmit = async (e) => {
-     const res = await signup(formData).unwrap()
-     dispatch(setCredentials(res))
-     navigate('/waiting-list')
+   const handleDiscordSignup = () => {
+     window.location.href = '/auth/discord/login?return_to=/waiting-list'
    }
    ```
-6. **Create `SignupForm.stories.tsx`** — stories for empty, partially filled, submitting state, error state
-7. Create `LoginPage.tsx` using `useLoginMutation()`
-8. **Create `LoginForm.stories.tsx`** — stories for empty and error states
-9. Verify full flow: signup → redirect to waiting list → logout → login → see waiting list
+6. **Create `SessionSignupCard.stories.tsx`** — stories for default, hover/CTA focus, and compact mobile states
+7. Verify full flow: click Discord CTA → OAuth callback → waiting list → logout → OAuth login → waiting list/profile
 
 **Storybook stories created this phase:**
 ```
 ui/src/components/FormField.stories.tsx
-ui/src/components/SignupForm.stories.tsx
-ui/src/components/LoginForm.stories.tsx
+ui/src/components/SessionSignupCard.stories.tsx
 ```
 
 ---
 
 ### Phase 7: User pages (Day 5)
 
-**Goal**: Profile, waiting list, change password pages work with RTK Query hooks.
+**Goal**: Profile and waiting-list pages work with RTK Query hooks.
 
 **Steps:**
 1. Create `StatusBadge.tsx` — colored status pill:
@@ -2128,8 +1999,7 @@ ui/src/components/LoginForm.stories.tsx
    const { data, isLoading } = useGetProfileQuery()
    ```
 8. **Create `ProfileCard.stories.tsx`** — stories for approved (with credentials) and waiting user
-9. Create `ChangePasswordPage.tsx` using `useChangePasswordMutation()`
-10. Verify: all three pages work end-to-end
+9. Verify: profile and waiting-list pages work end-to-end
 
 **Storybook stories created this phase:**
 ```
@@ -2228,7 +2098,7 @@ ui/src/components/ApprovalForm.stories.tsx
 3. Add form validation feedback (client-side)
 4. Add `ErrorBoundary` for unexpected crashes
 5. Create `.github/workflows/ci.yml` for automated testing + Storybook build
-6. Create admin CLI command: `./bot-signup admin create --email ... --password ...`
+6. Create admin CLI command: `./bot-signup admin promote --discord-id ...`
 7. Add `make storybook-build` target for static Storybook output (deploy to GitHub Pages or similar)
 8. Final end-to-end walkthrough
 9. Write `README.md` with setup instructions
@@ -2255,7 +2125,7 @@ func main() {
         Use: "serve",
         Run: func(cmd *cobra.Command, args []string) {
             // 1. Load config from env vars
-            jwtSecret := os.Getenv("JWT_SECRET")     // required
+            sessionSecret := os.Getenv("SESSION_SECRET") // required
             dbPath := os.Getenv("DB_PATH")           // default: ./data/bot-signup.db
             port := os.Getenv("PORT")                // default: 8080
 
@@ -2291,15 +2161,14 @@ func (s *Server) RegisterRoutes(mux *http.ServeMux) {
     mux.HandleFunc("GET /api/stats", s.handleStats)
 
     // ── Auth endpoints ────────────────────────────────
-    mux.HandleFunc("POST /api/auth/signup", s.handleSignup)
-    mux.HandleFunc("POST /api/auth/login", s.handleLogin)
+    mux.HandleFunc("GET /auth/discord/login", s.handleDiscordLogin)
+    mux.HandleFunc("GET /auth/discord/callback", s.handleDiscordCallback)
     mux.HandleFunc("POST /api/auth/logout", s.handleLogout)
     mux.HandleFunc("GET /api/auth/me", AuthMiddleware(s.secret, s.handleMe))
 
     // ── Profile endpoints (authenticated) ─────────────
     mux.HandleFunc("GET /api/profile", AuthMiddleware(s.secret, s.handleGetProfile))
     mux.HandleFunc("PUT /api/profile", AuthMiddleware(s.secret, s.handleUpdateProfile))
-    mux.HandleFunc("PUT /api/profile/password", AuthMiddleware(s.secret, s.handleChangePassword))
 
     // ── Admin endpoints (authenticated + admin role) ──
     mux.HandleFunc("GET /api/admin/waitlist", AuthMiddleware(s.secret, AdminOnly(s.handleWaitlist)))
@@ -2315,137 +2184,88 @@ func (s *Server) RegisterRoutes(mux *http.ServeMux) {
 }
 ```
 
-### 13.3 Signup handler
+### 13.3 Discord OAuth callback handler
 
 ```go
-func (s *Server) handleSignup(w http.ResponseWriter, r *http.Request) {
-    // 1. Decode request
-    var req SignupRequest
-    if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-        respondError(w, 400, "invalid JSON")
-        return
-    }
-
-    // 2. Validate fields
-    errors := validateSignup(req)
-    if len(errors) > 0 {
-        respondJSON(w, 400, map[string]interface{}{"errors": errors})
-        return
-    }
-
-    // 3. Check for existing user (discord_id + email must be unique)
-    existing, _ := s.db.GetUserByDiscordID(r.Context(), req.DiscordID)
-    if existing != nil {
-        respondError(w, 409, "Discord ID already registered")
-        return
-    }
-    existing, _ = s.db.GetUserByEmail(r.Context(), req.Email)
-    if existing != nil {
-        respondError(w, 409, "Email already registered")
-        return
-    }
-
-    // 4. Hash password
-    hash, err := auth.HashPassword(req.Password)
+func (s *Server) handleDiscordCallback(w http.ResponseWriter, r *http.Request) {
+    // 1. Validate state to prevent CSRF
+    state := r.URL.Query().Get("state")
+    returnTo, err := s.oauthStates.Consume(r.Context(), state)
     if err != nil {
-        respondError(w, 500, "internal error")
+        respondError(w, 400, "invalid oauth state")
         return
     }
 
-    // 5. Create user in database (status='waiting')
-    user, err := s.db.CreateUser(r.Context(), req.DiscordID, req.Email, req.DisplayName, hash)
+    // 2. Exchange authorization code for a Discord OAuth token
+    code := r.URL.Query().Get("code")
+    token, err := s.discordOAuth.Exchange(r.Context(), code)
     if err != nil {
-        respondError(w, 500, "failed to create user")
+        respondError(w, 502, "discord token exchange failed")
         return
     }
 
-    // 6. Generate JWT
-    token, err := auth.GenerateToken(user.ID, user.Role, s.secret)
+    // 3. Fetch Discord identity
+    discordUser, err := s.discordOAuth.FetchCurrentUser(r.Context(), token.AccessToken)
     if err != nil {
-        respondError(w, 500, "failed to generate token")
+        respondError(w, 502, "discord user fetch failed")
         return
     }
 
-    // 7. Return token + user
-    respondJSON(w, 201, SignupResponse{Token: token, User: user})
+    // 4. Upsert local user by Discord snowflake ID
+    user, err := s.db.UpsertDiscordUser(r.Context(), discordUser.ID, discordUser.Email, discordUser.Username, discordUser.AvatarURL())
+    if err != nil {
+        respondError(w, 500, "failed to create local user")
+        return
+    }
+
+    // 5. Set signed HTTP-only session cookie
+    s.sessions.Write(w, Session{UserID: user.ID})
+
+    // 6. Redirect based on role/status
+    if returnTo == "" {
+        returnTo = routeForUser(user)
+    }
+    http.Redirect(w, r, returnTo, http.StatusFound)
 }
 ```
 
-### 13.4 Frontend auth context (using RTK Query + Redux)
+### 13.4 Frontend auth context (Discord OAuth + session cookies)
 
 ```tsx
 // store/authSlice.ts
-import { createSlice, PayloadAction } from '@reduxjs/toolkit'
-
 interface AuthState {
   user: User | null
-  token: string | null
-}
-
-const initialState: AuthState = {
-  user: null,
-  token: localStorage.getItem('token'),
 }
 
 const authSlice = createSlice({
   name: 'auth',
-  initialState,
+  initialState: { user: null } satisfies AuthState,
   reducers: {
-    setCredentials: (state, action: PayloadAction<{ user: User; token: string }>) => {
-      state.user = action.payload.user
-      state.token = action.payload.token
-      localStorage.setItem('token', action.payload.token)
-    },
-    logout: (state) => {
-      state.user = null
-      state.token = null
-      localStorage.removeItem('token')
+    setUser: (state, action: PayloadAction<User | null>) => {
+      state.user = action.payload
     },
   },
 })
-
-export const { setCredentials, logout } = authSlice.actions
-export default authSlice.reducer
 ```
 
 ```tsx
 // auth/AuthContext.tsx
-import { useDispatch, useSelector } from 'react-redux'
-import { useLoginMutation, useSignupMutation, useGetMeQuery } from '../store/api'
-import { setCredentials, logout, selectAuth } from '../store/authSlice'
+import { useGetMeQuery, useLogoutMutation } from '../store/api'
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const dispatch = useDispatch()
-  const { token } = useSelector(selectAuth)
-  const [loginMutation] = useLoginMutation()
-  const [signupMutation] = useSignupMutation()
+  const { data: me, isLoading } = useGetMeQuery()
+  const [logoutMutation] = useLogoutMutation()
 
-  // RTK Query auto-fetches and caches /auth/me when token exists
-  const { data: me, error: meError } = useGetMeQuery(undefined, {
-    skip: !token, // don't fetch if no token
-  })
-
-  // If token is invalid, auto-logout
-  useEffect(() => {
-    if (meError) dispatch(logout())
-  }, [meError])
-
-  const login = async (email: string, password: string) => {
-    const res = await loginMutation({ email, password }).unwrap()
-    dispatch(setCredentials(res))
+  const loginWithDiscord = (returnTo = '/waiting-list') => {
+    window.location.href = `/auth/discord/login?return_to=${encodeURIComponent(returnTo)}`
   }
 
-  const signup = async (data: SignupData) => {
-    const res = await signupMutation(data).unwrap()
-    dispatch(setCredentials(res))
-  }
-
-  const handleLogout = () => {
-    dispatch(logout())
+  const logout = async () => {
+    await logoutMutation().unwrap()
   }
 
   return (
-    <AuthContext.Provider value={{ user: me ?? null, login, signup, logout: handleLogout }}>
+    <AuthContext.Provider value={{ user: me ?? null, isLoading, loginWithDiscord, logout }}>
       {children}
     </AuthContext.Provider>
   )
@@ -2479,17 +2299,13 @@ export default function App() {
         <Navbar />
         <Routes>
           <Route path="/" element={<LandingPage />} />
-          <Route path="/signup" element={<SignupPage />} />
-          <Route path="/login" element={<LoginPage />} />
+          <Route path="/auth/callback" element={<AuthCallbackPage />} />
           <Route path="/tutorial" element={<TutorialPage />} />
           <Route path="/waiting-list" element={
             <ProtectedRoute><WaitingListPage /></ProtectedRoute>
           } />
           <Route path="/profile" element={
             <ProtectedRoute><ProfilePage /></ProtectedRoute>
-          } />
-          <Route path="/profile/password" element={
-            <ProtectedRoute><ChangePasswordPage /></ProtectedRoute>
           } />
           <Route path="/admin" element={
             <AdminRoute><AdminDashboard /></AdminRoute>
@@ -2596,7 +2412,7 @@ func TestCreateUser(t *testing.T) {
 
     for _, tt := range tests {
         t.Run(tt.name, func(t *testing.T) {
-            _, err := db.CreateUser(context.Background(), tt.discordID, tt.email, "Test", "hash")
+            _, err := db.UpsertDiscordUser(context.Background(), tt.discordID, tt.email, "Test", "")
             if tt.expectError && err == nil { t.Error("expected error") }
             if !tt.expectError && err != nil { t.Error(err) }
         })
@@ -2604,17 +2420,17 @@ func TestCreateUser(t *testing.T) {
 }
 ```
 
-HTTP handler tests use `httptest.NewRecorder`:
+HTTP OAuth handler tests use `httptest.NewRecorder` with a fake Discord OAuth client:
 
 ```go
-func TestHandleSignup(t *testing.T) {
-    srv := newTestServer(t)
-    body := `{"discord_id":"123","email":"t@t.com","display_name":"T","password":"password123"}`
-    req := httptest.NewRequest("POST", "/api/auth/signup", strings.NewReader(body))
-    req.Header.Set("Content-Type", "application/json")
+func TestDiscordCallbackCreatesWaitingUser(t *testing.T) {
+    srv := newTestServerWithFakeDiscord(t)
+    state := srv.oauthStates.CreateForTest("/waiting-list")
+    req := httptest.NewRequest("GET", "/auth/discord/callback?code=fake&state="+state, nil)
     w := httptest.NewRecorder()
-    srv.handleSignup(w, req)
-    if w.Code != 201 { t.Errorf("expected 201, got %d", w.Code) }
+    srv.handleDiscordCallback(w, req)
+    if w.Code != http.StatusFound { t.Errorf("expected redirect, got %d", w.Code) }
+    if cookie := w.Result().Cookies()[0]; !cookie.HttpOnly { t.Error("session cookie must be HTTP-only") }
 }
 ```
 
@@ -2628,17 +2444,12 @@ Storybook serves as our primary component test environment. For each component:
 ```tsx
 import { expect, fn, userEvent, within } from '@storybook/test'
 
-export const SubmitForm: Story = {
-  args: { onSubmit: fn() },
+export const ContinueWithDiscord: Story = {
+  args: { onContinueWithDiscord: fn() },
   play: async ({ args, canvas }) => {
     const canvas = within(canvas)
-    await userEvent.type(canvas.getByLabelText('Email'), 'test@test.com')
-    await userEvent.type(canvas.getByLabelText('Password'), 'password123')
-    await userEvent.click(canvas.getByRole('button', { name: /log in/i }))
-    await expect(args.onSubmit).toHaveBeenCalledWith({
-      email: 'test@test.com',
-      password: 'password123',
-    })
+    await userEvent.click(canvas.getByRole('button', { name: /continue with discord/i }))
+    await expect(args.onContinueWithDiscord).toHaveBeenCalled()
   },
 }
 ```
@@ -2671,14 +2482,14 @@ Manual end-to-end walkthrough script (run before every release):
 | SQLite database corruption | All data lost | WAL mode, regular backups (cron job copies the `.db` file) |
 | Admin accidentally deletes wrong user | User data lost irrecoverably | Soft-delete option (add `deleted_at` column), confirmation dialogs |
 | No rate limiting on signup | Spam signups overwhelm the waiting list | Add rate limiting middleware (5 signups per IP per hour) |
-| JWT secret compromised | Anyone can forge tokens | Load from env var, rotate periodically, short expiry |
+| Session secret compromised | Anyone can forge cookies | Load from env var, rotate periodically, use secure cookie flags |
 
 ### 15.2 Alternatives considered
 
 | Decision | Alternative | Why we didn't choose it |
 |---|---|---|
 | SQLite | PostgreSQL | Overkill for this scale; requires separate server |
-| JWT | Server sessions | More complex for a single-binary app |
+| HTTP-only sessions | JWT in localStorage | Safer for OAuth browser apps; less token exposure to JavaScript |
 | RTK Query | React Query (TanStack Query) | Both are excellent; RTK Query integrates with Redux, which we use for auth state |
 | Storybook | No component isolation | Storybook catches visual bugs early and serves as living documentation |
 | Manual Discord ID entry | Discord OAuth | OAuth requires a registered Discord application; manual entry is simpler for V1 |
@@ -2703,8 +2514,8 @@ Manual end-to-end walkthrough script (run before every release):
 - [Storybook for React](https://storybook.js.org/docs/get-started/frameworks/react) — Component development environment
 - [Tailwind CSS documentation](https://tailwindcss.com/docs) — Utility-first CSS framework
 - [modernc.org/sqlite](https://pkg.go.dev/modernc.org/sqlite) — Pure-Go SQLite driver (no CGO)
-- [bcrypt via x/crypto](https://pkg.go.dev/golang.org/x/crypto/bcrypt) — Password hashing
-- [golang-jwt/jwt](https://github.com/golang-jwt/jwt) — JWT library for Go
+- [golang.org/x/oauth2](https://pkg.go.dev/golang.org/x/oauth2) — OAuth2 flow implementation
+- [Discord OAuth2 documentation](https://discord.com/developers/docs/topics/oauth2) — Discord authorization and token exchange
 
 ### Key files from the discord-bot repo
 

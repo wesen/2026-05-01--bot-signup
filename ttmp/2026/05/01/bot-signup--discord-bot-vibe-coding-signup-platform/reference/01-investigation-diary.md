@@ -219,3 +219,58 @@ go test ./...
 
 1. Commit Phase 4 profile/admin implementation.
 2. Start Phase 5 frontend scaffolding with Vite, Tailwind, Storybook, Redux Toolkit, and RTK Query.
+
+## 2026-05-01 — Requirement pivot: Discord OAuth only and VibeBot Sessions visual reference
+
+### What changed
+
+The product direction changed before starting the frontend: the app should not have passwords at all. Authentication should be Discord OAuth only, using HTTP-only same-site session cookies. The earlier bcrypt/JWT/password signup implementation is now explicitly superseded and must be replaced rather than preserved for backwards compatibility.
+
+The user also supplied a landing-page reference image at `/tmp/pi-clipboard-92d825d5-a5a0-4f6c-be68-3edd25c51e5c.png`. I copied it into the ticket as:
+
+```text
+ttmp/2026/05/01/bot-signup--discord-bot-vibe-coding-signup-platform/sources/01-vibebot-sessions-ui-reference.png
+```
+
+### UI reference summary
+
+The target UI is a clean SaaS-style "VibeBot Sessions" landing page:
+
+- white/off-white background with subtle purple/blue gradient depth;
+- top nav with robot logo, "VibeBot Sessions", About/FAQ links, purple Sign Up button;
+- two-column hero: left value prop, right white signup/reservation card;
+- purple Discord-blurple accent color;
+- badge text `VIBE + CODE + DISCORD`;
+- headline: "Build a Discord Bot. Vibe. Code. Deploy.";
+- signup card title: "Sign Up for a Session";
+- primary CTA should become "Continue with Discord" or equivalent Discord OAuth CTA;
+- three feature cards under "What you get".
+
+### Documentation updates
+
+Updated the implementation guide to:
+
+1. Link the image in frontmatter `RelatedFiles`.
+2. Make Discord OAuth the only auth path.
+3. Remove password signup/login/change-password from the architecture and page plan.
+4. Replace JWT/localStorage guidance with HTTP-only session cookie guidance.
+5. Add Pyxis-derived Discord OAuth operational notes: exact redirect URL matching, bot guild install if role/member lookup is needed, and Server Members Intent caveat.
+6. Update tasks to introduce Phase 3R and Phase 4R because the already committed password/JWT backend must be refactored.
+
+### Commands run
+
+```bash
+cp /tmp/pi-clipboard-92d825d5-a5a0-4f6c-be68-3edd25c51e5c.png \
+  ttmp/2026/05/01/bot-signup--discord-bot-vibe-coding-signup-platform/sources/01-vibebot-sessions-ui-reference.png
+rg -n "password|Password|POST /api/auth/signup|POST /api/auth/login|JWT|bcrypt|ChangePassword|LoginPage|SignupPage|useLoginMutation|useSignupMutation|localStorage|password_hash|auth_provider|profile/password" \
+  ttmp/2026/05/01/bot-signup--discord-bot-vibe-coding-signup-platform/design-doc/01-full-system-design-and-implementation-guide.md
+```
+
+### What was tricky
+
+The backend already has a committed bcrypt/JWT implementation. Since there is no backwards-compatibility requirement, the clean path is not to layer OAuth on top of password auth, but to replace the auth package, schema, routes, and frontend plan with Discord OAuth/session semantics.
+
+### Next steps
+
+1. Commit the requirement-pivot documentation and stored image.
+2. Implement Phase 3R: replace password/JWT auth with Discord OAuth and HTTP-only sessions.
