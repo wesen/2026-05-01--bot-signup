@@ -2,6 +2,8 @@ import { ArrowLeft, BookOpen, LogOut, ShieldCheck } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../auth/useAuth'
 import { CredentialCard } from '../components/CredentialCard'
+import { CredentialTable } from '../components/CredentialTable'
+import { EnvrcSnippet } from '../components/EnvrcSnippet'
 import { StatusBadge } from '../components/StatusBadge'
 import { useGetProfileQuery } from '../store/api'
 
@@ -60,6 +62,13 @@ export function ProfilePage() {
                 <CredentialCard label="Guild ID" value={credentials.guild_id} />
                 <CredentialCard label="Public Key" value={credentials.public_key} />
                 <CredentialCard label="Bot Token" value={credentials.bot_token} secret />
+              </div>
+              <div className="mt-6">
+                <h3 className="mb-3 text-lg font-black text-slate-950">Credential IDs</h3>
+                <CredentialTable credentials={credentials} />
+              </div>
+              <div className="mt-6">
+                <EnvrcSnippet credentials={credentials} />
               </div>
             </div>
           ) : (
