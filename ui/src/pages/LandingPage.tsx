@@ -28,12 +28,19 @@ export function LandingPage() {
             Docs
           </Link>
           {user ? (
-            <Link
-              to={user.role === 'admin' ? '/admin' : user.status === 'approved' ? '/profile' : '/waiting-list'}
-              className="rounded-xl bg-[#5865F2] px-4 py-2 font-semibold text-white shadow-sm transition hover:bg-[#4752C4]"
-            >
-              {user.role === 'admin' ? 'Admin' : 'Status'}
-            </Link>
+            <>
+              <Link
+                to={user.status === 'approved' ? '/profile' : '/waiting-list'}
+                className="rounded-xl bg-[#5865F2] px-4 py-2 font-semibold text-white shadow-sm transition hover:bg-[#4752C4]"
+              >
+                Status
+              </Link>
+              {user.role === 'admin' && (
+                <Link className="hidden hover:text-[#5865F2] sm:inline" to="/admin">
+                  Admin
+                </Link>
+              )}
+            </>
           ) : (
             <button
               type="button"
@@ -121,8 +128,8 @@ function LoggedInStatusCard({ user }: { user: NonNullable<ReturnType<typeof useA
     suspended: 'Your access is currently suspended. Contact the organizers for help.',
   }[user.status]
 
-  const primaryLink = user.role === 'admin' ? '/admin' : user.status === 'approved' ? '/profile' : '/waiting-list'
-  const primaryLabel = user.role === 'admin' ? 'Open admin dashboard' : user.status === 'approved' ? 'View your profile' : 'View waiting list status'
+  const primaryLink = user.status === 'approved' ? '/profile' : '/waiting-list'
+  const primaryLabel = user.status === 'approved' ? 'View your profile' : 'View waiting list status'
 
   return (
     <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-2xl shadow-indigo-100/70 sm:p-8">
@@ -147,6 +154,14 @@ function LoggedInStatusCard({ user }: { user: NonNullable<ReturnType<typeof useA
         >
           Read the docs
         </Link>
+        {user.role === 'admin' && (
+          <Link
+            className="inline-flex justify-center rounded-xl border border-slate-200 px-5 py-3 text-sm font-bold text-slate-700 transition hover:border-[#5865F2] hover:text-[#5865F2]"
+            to="/admin"
+          >
+            Open admin dashboard
+          </Link>
+        )}
       </div>
     </section>
   )
