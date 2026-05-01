@@ -2,6 +2,7 @@ package server
 
 import (
 	"errors"
+	"log"
 	"net/http"
 
 	"github.com/go-go-golems/bot-signup/internal/database"
@@ -29,6 +30,7 @@ func (s *Server) handleDiscordCallback(w http.ResponseWriter, r *http.Request) {
 	}
 	discordUser, err := s.discordOAuth.ExchangeAndFetchUser(r.Context(), code)
 	if err != nil {
+		log.Printf("discord oauth callback failed: %v", err)
 		respondError(w, http.StatusBadGateway, "discord oauth failed")
 		return
 	}
