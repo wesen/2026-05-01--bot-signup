@@ -66,9 +66,14 @@ func (d *DiscordOAuth) ExchangeAndFetchUser(ctx context.Context, code string) (*
 		return nil, fmt.Errorf("exchange discord code: %w", err)
 	}
 	client := d.config.Client(ctx, token)
-	if d.client != nil {
-		// Preserve custom transports in tests if one was configured by the caller.
-		client.Transport = d.client.Transport
+	if d.client != nil && d.client.Transport != nil {
+		// Preserve custom transports in tests without replacing the OAuth2 transport
+		// that injects the Authorization header for Discord API calls.
+		if transport, ok := client.Transport.(*oauth2.Transport); ok {
+			transport.Base = d.client.Transport
+		} else {
+			client.Transport = d.client.Transport
+		}
 	}
 	return fetchDiscordUser(ctx, client)
 }
