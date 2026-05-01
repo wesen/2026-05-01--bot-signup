@@ -1,7 +1,6 @@
 import { ArrowLeft, BookOpen, LogOut, ShieldCheck } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../auth/useAuth'
-import { CredentialCard } from '../components/CredentialCard'
 import { CredentialTable } from '../components/CredentialTable'
 import { EnvrcSnippet } from '../components/EnvrcSnippet'
 import { StatusBadge } from '../components/StatusBadge'
@@ -57,14 +56,7 @@ export function ProfilePage() {
             <div className="mt-8">
               <h2 className="text-2xl font-black text-slate-950">Bot credentials</h2>
               <p className="mt-2 text-sm text-slate-500">Keep these secret. Never paste your bot token into public chat or commits.</p>
-              <div className="mt-5 grid gap-4 lg:grid-cols-2">
-                <CredentialCard label="Application ID" value={credentials.application_id} />
-                <CredentialCard label="Guild ID" value={credentials.guild_id} />
-                <CredentialCard label="Public Key" value={credentials.public_key} />
-                <CredentialCard label="Bot Token" value={credentials.bot_token} secret />
-              </div>
-              <div className="mt-6">
-                <h3 className="mb-3 text-lg font-black text-slate-950">Credential IDs</h3>
+              <div className="mt-5">
                 <CredentialTable credentials={credentials} />
               </div>
               <div className="mt-6">
