@@ -16,44 +16,54 @@ export function LandingPage() {
 
   return (
     <main className="min-h-screen overflow-hidden bg-[radial-gradient(circle_at_top_left,_rgba(88,101,242,0.14),_transparent_34%),radial-gradient(circle_at_top_right,_rgba(168,85,247,0.12),_transparent_30%),#fbfbff] text-slate-950">
-      <nav className="mx-auto flex max-w-6xl items-center justify-between px-6 py-6">
-        <a href="/" className="flex items-center gap-2 text-lg font-bold tracking-tight">
-          <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#5865F2] text-white">
-            <Bot className="h-5 w-5" aria-hidden="true" />
-          </span>
-          VibeBot Sessions
-        </a>
-        <div className="flex items-center gap-6 text-sm font-medium text-slate-600">
-          <Link className="hidden hover:text-[#5865F2] sm:inline" to="/tutorial">
-            Docs
-          </Link>
-          {user ? (
-            <>
-              <Link
-                to={user.status === 'approved' ? '/profile' : '/waiting-list'}
+      <header className="mx-auto max-w-6xl px-6 py-6">
+        <nav className="flex items-center justify-between">
+          <a href="/" className="flex items-center gap-2 text-lg font-bold tracking-tight">
+            <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#5865F2] text-white">
+              <Bot className="h-5 w-5" aria-hidden="true" />
+            </span>
+            VibeBot Sessions
+          </a>
+          <div className="flex items-center gap-6 text-sm font-medium text-slate-600">
+            <Link className="hidden hover:text-[#5865F2] sm:inline" to="/tutorial">
+              Docs
+            </Link>
+            {user ? (
+              <>
+                <Link
+                  to={user.status === 'approved' ? '/profile' : '/waiting-list'}
+                  className="rounded-xl bg-[#5865F2] px-4 py-2 font-semibold text-white shadow-sm transition hover:bg-[#4752C4]"
+                >
+                  Status
+                </Link>
+                {user.role === 'admin' && (
+                  <Link className="hidden hover:text-[#5865F2] sm:inline" to="/admin">
+                    Admin
+                  </Link>
+                )}
+              </>
+            ) : (
+              <button
+                type="button"
+                onClick={startDiscord}
                 className="rounded-xl bg-[#5865F2] px-4 py-2 font-semibold text-white shadow-sm transition hover:bg-[#4752C4]"
               >
-                Status
-              </Link>
-              {user.role === 'admin' && (
-                <Link className="hidden hover:text-[#5865F2] sm:inline" to="/admin">
-                  Admin
-                </Link>
-              )}
-            </>
-          ) : (
-            <button
-              type="button"
-              onClick={startDiscord}
-              className="rounded-xl bg-[#5865F2] px-4 py-2 font-semibold text-white shadow-sm transition hover:bg-[#4752C4]"
-            >
-              Sign Up
-            </button>
-          )}
+                Sign Up
+              </button>
+            )}
+          </div>
+        </nav>
+        <div className="mt-4 flex justify-end">
+          <Link
+            className="inline-flex items-center rounded-full border border-indigo-100 bg-white/80 px-4 py-2 text-sm font-bold text-[#5865F2] shadow-sm transition hover:border-[#5865F2] hover:bg-indigo-50"
+            to={user?.status === 'approved' ? '/profile' : '/tutorial'}
+          >
+            Get started →
+          </Link>
         </div>
-      </nav>
+      </header>
 
-      <section id="about" className="mx-auto grid max-w-6xl items-center gap-10 px-6 py-12 lg:grid-cols-[1.08fr_0.92fr] lg:py-20">
+      <section id="about" className="mx-auto grid max-w-6xl items-center gap-10 px-6 py-10 lg:grid-cols-[1.08fr_0.92fr] lg:py-16">
         <div>
           <div className="inline-flex rounded-full bg-indigo-50 px-4 py-2 text-xs font-bold tracking-[0.22em] text-[#5865F2]">
             VIBE + CODE + DISCORD
