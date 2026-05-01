@@ -168,7 +168,7 @@ func runCmd(dir, name string, args ...string) error {
 func recreate(dir string) error {
 	entries, _ := os.ReadDir(dir)
 	for _, entry := range entries {
-		if entry.Name() == ".keep" {
+		if entry.Name() == ".keep" || entry.Name() == "placeholder.txt" {
 			continue
 		}
 		if err := os.RemoveAll(filepath.Join(dir, entry.Name())); err != nil {

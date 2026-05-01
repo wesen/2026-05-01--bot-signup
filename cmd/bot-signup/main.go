@@ -75,7 +75,6 @@ func runServe(addr string) error {
 	if err != nil {
 		log.Printf("SPA assets unavailable: %v", err)
 	} else {
-		mux.Handle("GET /", spaHandler)
 		mux.Handle("GET /{filepath...}", spaHandler)
 	}
 
