@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { useAuth } from '../auth/useAuth'
 import { CredentialTable } from '../components/CredentialTable'
 import { EnvrcSnippet } from '../components/EnvrcSnippet'
+import { SetupGuide } from '../components/SetupGuide'
 import { StatusBadge } from '../components/StatusBadge'
 import { discordBotInviteURL, useGetProfileQuery } from '../store/api'
 
@@ -69,6 +70,9 @@ export function ProfilePage() {
               </div>
               <div className="mt-6">
                 <EnvrcSnippet credentials={credentials} />
+              </div>
+              <div className="mt-8">
+                <SetupGuide credentials={credentials} />
               </div>
             </div>
           ) : (

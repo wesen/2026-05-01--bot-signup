@@ -169,3 +169,16 @@ a {
   border-radius: 0.75rem;
   padding: 0.75rem 1rem;
 }
+
+.profile-guide-markdown h2 {
+  font-size: 1.35rem;
+  margin-top: 1.75rem;
+}
+
+.profile-guide-markdown p,
+.profile-guide-markdown ul,
+.profile-guide-markdown ol,
+.profile-guide-markdown table,
+.profile-guide-markdown blockquote {
+  font-size: 0.95rem;
+}
