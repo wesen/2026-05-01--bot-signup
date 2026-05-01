@@ -25,3 +25,94 @@ button,
 a {
   font: inherit;
 }
+
+.tutorial-markdown {
+  color: #334155;
+  line-height: 1.75;
+}
+
+.tutorial-markdown h1,
+.tutorial-markdown h2,
+.tutorial-markdown h3 {
+  color: #0f172a;
+  font-weight: 900;
+  letter-spacing: -0.03em;
+}
+
+.tutorial-markdown h1 {
+  font-size: clamp(2.25rem, 5vw, 3.5rem);
+  line-height: 1.05;
+  margin: 0 0 1.5rem;
+}
+
+.tutorial-markdown h2 {
+  font-size: 1.75rem;
+  margin: 2.25rem 0 0.75rem;
+}
+
+.tutorial-markdown h3 {
+  font-size: 1.25rem;
+  margin: 1.5rem 0 0.5rem;
+}
+
+.tutorial-markdown p,
+.tutorial-markdown ul,
+.tutorial-markdown ol,
+.tutorial-markdown table,
+.tutorial-markdown blockquote {
+  margin: 1rem 0;
+}
+
+.tutorial-markdown ul,
+.tutorial-markdown ol {
+  padding-left: 1.5rem;
+}
+
+.tutorial-markdown li {
+  margin: 0.35rem 0;
+}
+
+.tutorial-markdown a {
+  color: #5865f2;
+  font-weight: 700;
+}
+
+.tutorial-markdown pre {
+  overflow-x: auto;
+  border-radius: 1rem;
+  background: #0f172a;
+  color: #f8fafc;
+  padding: 1rem;
+}
+
+.tutorial-markdown code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 0.9em;
+}
+
+.tutorial-markdown :not(pre) > code {
+  border-radius: 0.4rem;
+  background: #eef2ff;
+  color: #3730a3;
+  padding: 0.15rem 0.35rem;
+}
+
+.tutorial-markdown table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.95rem;
+}
+
+.tutorial-markdown th,
+.tutorial-markdown td {
+  border: 1px solid #e2e8f0;
+  padding: 0.6rem;
+  text-align: left;
+}
+
+.tutorial-markdown blockquote {
+  border-left: 4px solid #5865f2;
+  background: #eef2ff;
+  border-radius: 0.75rem;
+  padding: 0.75rem 1rem;
+}

@@ -491,3 +491,38 @@ go test ./...
 
 1. Commit Phase 8.
 2. Start Phase 9 tutorial markdown content.
+
+## 2026-05-01 — Phase 9 tutorial page
+
+### What was done
+
+1. Copied the discord-bot tutorial from `/tmp/discord-bot/pkg/doc/tutorials/building-and-running-discord-js-bots.md` to `ui/src/content/tutorial.md`.
+2. Updated `TutorialPage` to render the markdown with `react-markdown` and `remark-gfm`.
+3. Added local markdown styling in `ui/src/index.css` for headings, code blocks, inline code, tables, lists, links, and blockquotes.
+4. Added `TutorialPage.stories.tsx`.
+
+### Commands run
+
+```bash
+cp /tmp/discord-bot/pkg/doc/tutorials/building-and-running-discord-js-bots.md ui/src/content/tutorial.md
+pnpm --dir ui lint
+pnpm --dir ui build
+pnpm --dir ui build-storybook
+rm -rf ui/dist ui/storybook-static
+go test ./...
+```
+
+### What worked
+
+- The full tutorial markdown imports via Vite `?raw` and renders correctly.
+- Frontend lint/build and Storybook build pass.
+- Go tests continue to pass.
+
+### What was tricky
+
+- Importing the full tutorial increases the app bundle size above the default Vite warning threshold. This is acceptable for now, but if the tutorial grows much more we should lazy-load `/tutorial` or fetch the markdown separately.
+
+### Next steps
+
+1. Commit Phase 9.
+2. Implement Phase 10/11 with Dagger build-web, go:embed SPA serving, and CI/polish targets.

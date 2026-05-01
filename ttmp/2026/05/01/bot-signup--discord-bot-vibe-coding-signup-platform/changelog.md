@@ -44,3 +44,8 @@ Implemented Phase 7 user pages: protected route, waiting-list page, profile dash
 
 Implemented Phase 8 admin pages: admin route guard, stats cards, waitlist table, approval form, admin dashboard/detail routes, RTK Query admin endpoints, admin Storybook stories, and validation with frontend lint/build/storybook plus Go tests.
 
+
+## 2026-05-01
+
+Implemented Phase 9 tutorial page: copied discord-bot tutorial markdown into ui/src/content, rendered it with react-markdown/remark-gfm, added markdown styling and TutorialPage Storybook story, and validated lint/build/storybook/tests.
+
