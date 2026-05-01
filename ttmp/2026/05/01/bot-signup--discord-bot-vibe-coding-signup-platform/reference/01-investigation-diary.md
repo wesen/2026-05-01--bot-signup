@@ -389,3 +389,55 @@ go test ./...
 
 1. Commit Phase 5/6 frontend scaffold.
 2. Start Phase 7 user pages: waiting list, profile, credential cards, route protection.
+
+## 2026-05-01 — Phase 7 user pages
+
+### What was done
+
+1. Started Storybook in tmux session `bot-signup-storybook` so progress is visible at `http://localhost:6006/`.
+2. Added shared UI components:
+   - `StatusBadge`,
+   - `CredentialCard`,
+   - `ProtectedRoute`.
+3. Added Storybook stories for:
+   - `StatusBadge`,
+   - `CredentialCard`,
+   - `WaitingListPage`,
+   - `ProfilePage`.
+4. Extended RTK Query with `getProfile` and profile/credential response types.
+5. Added user-facing pages:
+   - `/waiting-list`,
+   - `/profile`,
+   - `/auth/callback`,
+   - placeholder `/tutorial`.
+6. Wired React Router routes through `ProtectedRoute`.
+7. Kept output artifacts (`ui/dist`, `ui/storybook-static`) out of git.
+
+### Commands run
+
+```bash
+tmux new-session -d -s bot-signup-storybook 'cd /home/manuel/code/wesen/2026-05-01--bot-signup/ui && pnpm exec storybook dev -p 6006 --host 0.0.0.0'
+pnpm --dir ui lint
+pnpm --dir ui build
+pnpm --dir ui build-storybook
+rm -rf ui/dist ui/storybook-static
+go test ./...
+```
+
+### What worked
+
+- Storybook is running in tmux and rebuilds as files change.
+- `pnpm --dir ui lint` passes.
+- `pnpm --dir ui build` passes.
+- `pnpm --dir ui build-storybook` passes.
+- `go test ./...` passes.
+
+### What was tricky
+
+- `TutorialPage` originally used Tailwind typography `prose` classes, but the phase only needs a placeholder; I removed the dependency on typography-specific styling for now.
+- `ProfilePage` story uses RTK Query cache seeding via `apiSlice.util.upsertQueryData` so it can render without a backend.
+
+### Next steps
+
+1. Commit Phase 7.
+2. Start Phase 8 admin pages.

@@ -8,7 +8,7 @@
 - [x] Phase 4R: Adjust profile/admin handlers to use session middleware and OAuth-created users
 - [x] Phase 5: Frontend scaffolding (Vite + React + Tailwind + Storybook + RTK Query)
 - [x] Phase 6: OAuth landing/signup card (VibeBot Sessions visual reference + Storybook stories)
-- [ ] Phase 7: User pages (profile + waiting list + credential display + stories)
+- [x] Phase 7: User pages (profile + waiting list + credential display + stories)
 - [ ] Phase 8: Admin pages (dashboard + approval form + stories)
 - [ ] Phase 9: Tutorial page (embedded markdown from discord-bot)
 - [ ] Phase 10: Frontend embedding (go:embed + single-binary build)

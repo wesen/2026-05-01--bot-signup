@@ -34,3 +34,8 @@ Implemented Phase 3R/4R: replaced password/JWT auth with Discord OAuth, signed H
 
 Implemented Phase 5/6 frontend scaffold: Vite React TypeScript app, Tailwind v4, Redux Toolkit/RTK Query, Discord OAuth auth provider, VibeBot Sessions landing page matching the stored reference image, Storybook config, component stories, Makefile frontend targets, and passing lint/build/storybook checks.
 
+
+## 2026-05-01
+
+Implemented Phase 7 user pages: protected route, waiting-list page, profile dashboard with credential cards, auth callback placeholder, tutorial placeholder, RTK Query getProfile endpoint, component/page Storybook stories, and validation with UI lint/build/storybook plus Go tests.
+
