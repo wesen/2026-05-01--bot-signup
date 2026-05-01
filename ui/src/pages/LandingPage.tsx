@@ -28,6 +28,9 @@ export function LandingPage() {
             <Link className="hidden hover:text-[#5865F2] sm:inline" to="/tutorial">
               Docs
             </Link>
+            <Link className="hidden hover:text-[#5865F2] sm:inline" to={user?.status === 'approved' ? '/profile' : '/tutorial'}>
+              Get started
+            </Link>
             {user ? (
               <>
                 <Link
@@ -53,17 +56,9 @@ export function LandingPage() {
             )}
           </div>
         </nav>
-        <div className="mt-4 flex justify-end">
-          <Link
-            className="inline-flex items-center rounded-full border border-indigo-100 bg-white/80 px-4 py-2 text-sm font-bold text-[#5865F2] shadow-sm transition hover:border-[#5865F2] hover:bg-indigo-50"
-            to={user?.status === 'approved' ? '/profile' : '/tutorial'}
-          >
-            Get started →
-          </Link>
-        </div>
       </header>
 
-      <section id="about" className="mx-auto grid max-w-6xl items-center gap-10 px-6 py-10 lg:grid-cols-[1.08fr_0.92fr] lg:py-16">
+      <section id="about" className="mx-auto grid max-w-6xl items-center gap-10 px-6 py-12 lg:grid-cols-[1.08fr_0.92fr] lg:py-20">
         <div>
           <div className="inline-flex rounded-full bg-indigo-50 px-4 py-2 text-xs font-bold tracking-[0.22em] text-[#5865F2]">
             VIBE + CODE + DISCORD
