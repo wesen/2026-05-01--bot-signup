@@ -1,4 +1,4 @@
-import { Mail, User } from 'lucide-react'
+import { ShieldCheck, UserRoundCheck } from 'lucide-react'
 import { DiscordOAuthButton } from './DiscordOAuthButton'
 
 interface SessionSignupCardProps {
@@ -15,15 +15,15 @@ export function SessionSignupCard({ onContinueWithDiscord }: SessionSignupCardPr
         </p>
       </div>
 
-      <div className="space-y-4" aria-hidden="true">
-        <label className="flex items-center gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3 text-slate-400">
-          <User className="h-5 w-5 text-slate-400" />
-          <span>Your Name</span>
-        </label>
-        <label className="flex items-center gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3 text-slate-400">
-          <Mail className="h-5 w-5 text-slate-400" />
-          <span>Email Address</span>
-        </label>
+      <div className="space-y-3">
+        <div className="flex items-center gap-3 rounded-xl border border-indigo-100 bg-indigo-50/70 px-4 py-3 text-sm font-semibold text-slate-700">
+          <UserRoundCheck className="h-5 w-5 text-[#5865F2]" />
+          <span>Your Discord profile provides your name and email.</span>
+        </div>
+        <div className="flex items-center gap-3 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-semibold text-slate-600">
+          <ShieldCheck className="h-5 w-5 text-emerald-500" />
+          <span>No password or extra signup form required.</span>
+        </div>
       </div>
 
       <div className="mt-5">
