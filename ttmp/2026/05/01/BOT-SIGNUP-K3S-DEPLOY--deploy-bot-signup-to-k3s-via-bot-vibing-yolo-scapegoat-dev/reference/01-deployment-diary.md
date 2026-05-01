@@ -461,3 +461,124 @@ Planned production host:
 ```text
 https://bot-vibing.yolo.scapegoat.dev
 ```
+
+## Step 4: Promoted first production Discord user and documented SQLite access
+
+After the first Discord login created a production SQLite user row, I used a short-lived Kubernetes Job to mount the `bot-signup-data` PVC and run `sqlite3` against `/data/bot-signup.db`. The Job guarded against accidentally promoting multiple users by checking that exactly one user existed before running the broad `update users set role = 'admin'` statement.
+
+I also wrote a repeatable production SQLite access playbook so future operator tasks do not require ad hoc shell reconstruction.
+
+### Prompt Context
+
+**User prompt (verbatim):** "I added a user, can you promote it to admin, and also make a user guide on how to access the prod db?
+
+ After you sign in once with Discord, your user should exist in SQLite.                              
+                                                                                                     
+ If there is only one local user, run:                                                               
+                                                                                                     
+ ```bash                                                                                             
+   sqlite3 data/bot-signup.db \                                                                      
+     \"update users set role = 'admin', updated_at = datetime('now');\"                                
+ ```                                                                                                 
+                                                                                                     
+ Then refresh:                                                                                       
+                                                                                                     
+ ```text                                                                                             
+   http://localhost:5179/admin                                                                       
+ ```                                                                                                 
+                                                                                                     
+ Safer: promote only your Discord account                                                            
+                                                                                                     
+ Find users:                                                                                         
+                                                                                                     
+ ```bash                                                                                             
+   sqlite3 data/bot-signup.db \                                                                      
+     \"select id, discord_id, email, display_name, role, status from users;\"                          
+ ```                                                                                                 
+                                                                                                     
+ Then promote your user:                                                                             
+                                                                                                     
+ ```bash                                                                                             
+   sqlite3 data/bot-signup.db \                                                                      
+     \"update users set role = 'admin', updated_at = datetime('now') where discord_id =               
+ 'YOUR_DISCORD_ID';\"                                                                                 
+ ```                                                                                                 
+                                                                                                     
+ Then go to:"
+
+**Assistant interpretation:** Promote the newly-created production user to admin in the k3s SQLite database and write a reusable operator guide for production DB access.
+
+**Inferred user intent:** Bootstrap the first admin account and leave behind safe instructions for future admin/user maintenance.
+
+### What I did
+
+- Verified the production pod and `/data/bot-signup.db` exist.
+- Confirmed the app image does not include `sqlite3`.
+- Created and ran a short-lived Job named `bot-signup-sqlite-admin-oneshot` in namespace `bot-signup` using `alpine:3.20` plus `apk add sqlite`.
+- Mounted the `bot-signup-data` PVC into the Job at `/data`.
+- Queried users before promotion.
+- Verified exactly one user existed.
+- Updated that user to `role='admin'`.
+- Queried users after promotion.
+- Added playbook `playbook/01-production-sqlite-access-guide.md`.
+
+### Why
+
+- The production app stores SQLite on a PVC, not inside the container filesystem.
+- The runtime image is intentionally small and does not ship the `sqlite3` CLI.
+- A Kubernetes Job gives a reproducible, auditable way to access the DB without modifying the running app image.
+
+### What worked
+
+The guarded promotion Job completed successfully.
+
+Before:
+
+```text
+1|363877777977376768|wesen@ruinwesen.com|slono|user|waiting
+```
+
+After:
+
+```text
+1|363877777977376768|wesen@ruinwesen.com|slono|admin|waiting
+```
+
+### What didn't work
+
+An initial thought was to run `sqlite3` directly in the app container, but the binary is not installed there. That is expected for the slim production image.
+
+### What I learned
+
+- The production DB file is present at `/data/bot-signup.db` and accompanied by SQLite WAL files.
+- For one-off access, mounting the PVC into a temporary Job is cleaner than copying the SQLite database out and back in, especially with WAL files.
+
+### What was tricky to build
+
+- SQLite plus WAL files should not be casually copied while the app is running. The temporary Job approach avoids having to manually synchronize `bot-signup.db`, `bot-signup.db-wal`, and `bot-signup.db-shm`.
+- Because the PVC is `ReadWriteOnce`, this works in the current single-node cluster. In a future multi-node cluster, maintenance Jobs may need node affinity or an app scale-down window.
+
+### What warrants a second pair of eyes
+
+- Confirm whether first-admin bootstrap should also set `status='approved'`. The requested operation only changed `role` to `admin`, and the resulting row still has `status='waiting'`.
+- Consider adding a first-admin bootstrap command or admin CLI to avoid direct SQLite writes.
+
+### What should be done in the future
+
+- Delete the completed Job after TTL cleanup if it lingers.
+- Add an app-level admin bootstrap path if this becomes a repeated operation.
+
+### Code review instructions
+
+- Review `playbook/01-production-sqlite-access-guide.md` for operational accuracy.
+- Review admin middleware behavior to determine whether `role=admin` alone is enough or whether `status` should also change.
+
+### Technical details
+
+The successful command path was:
+
+```bash
+kubectl apply -f /tmp/bot-signup-sqlite-job.yaml
+kubectl -n bot-signup wait --for=condition=complete job/bot-signup-sqlite-admin-oneshot --timeout=120s
+kubectl -n bot-signup logs job/bot-signup-sqlite-admin-oneshot
+```

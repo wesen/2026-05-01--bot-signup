@@ -25,3 +25,12 @@ Resumed after direnv fix: added Docker/GHCR/GitOps scaffolding, seeded Vault run
 - /home/manuel/code/wesen/2026-05-01--bot-signup/Dockerfile — Production image build added and validated
 - /home/manuel/code/wesen/2026-05-01--bot-signup/cmd/bot-signup/main.go — Runtime route conflict blocking rollout
 
+
+## 2026-05-01
+
+Promoted the first production Discord user to admin via a guarded SQLite maintenance Job and added a production SQLite access playbook.
+
+### Related Files
+
+- /home/manuel/code/wesen/2026-05-01--bot-signup/ttmp/2026/05/01/BOT-SIGNUP-K3S-DEPLOY--deploy-bot-signup-to-k3s-via-bot-vibing-yolo-scapegoat-dev/playbook/01-production-sqlite-access-guide.md — Reusable production DB access and admin promotion guide
+
