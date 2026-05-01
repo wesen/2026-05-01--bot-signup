@@ -54,6 +54,24 @@ func (s *Server) handleLogout(w http.ResponseWriter, r *http.Request) {
 	respondJSON(w, http.StatusOK, map[string]string{"message": "logged out"})
 }
 
+func (s *Server) handleSession(w http.ResponseWriter, r *http.Request) {
+	userID, err := s.sessions.ReadSession(r)
+	if err != nil {
+		respondJSON(w, http.StatusOK, map[string]*database.User{"user": nil})
+		return
+	}
+	user, err := s.db.GetUserByID(r.Context(), userID)
+	if errors.Is(err, database.ErrNotFound) {
+		respondJSON(w, http.StatusOK, map[string]*database.User{"user": nil})
+		return
+	}
+	if err != nil {
+		respondError(w, http.StatusInternalServerError, "database error")
+		return
+	}
+	respondJSON(w, http.StatusOK, map[string]*database.User{"user": user})
+}
+
 func (s *Server) handleMe(w http.ResponseWriter, r *http.Request) {
 	userID, ok := currentUserID(r)
 	if !ok {

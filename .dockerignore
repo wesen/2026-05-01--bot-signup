@@ -1,0 +1,41 @@
+.git
+.github
+.direnv
+.env
+.env.*
+!.env.example
+.envrc
+
+# Local build/test artifacts
+bin/
+dist/
+coverage/
+*.test
+*.out
+bot-signup
+
+# Runtime data and local databases
+data/*.db
+data/*.sqlite
+data/*.sqlite3
+*.db
+*.sqlite
+*.sqlite3
+
+# Node / frontend artifacts
+ui/node_modules/
+ui/dist/
+ui/storybook-static/
+ui/.vite/
+
+# Ticket scratch and local tool output
+ttmp/
+.playwright-mcp/
+playwright-report/
+test-results/
+
+# OS/editor noise
+.DS_Store
+.idea/
+.vscode/
+*.swp

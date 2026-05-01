@@ -25,6 +25,16 @@ topics:
       description: Storybook component development
     - slug: rtk-query
       description: Redux Toolkit Query for API state management
+    - slug: argocd
+      description: Argo CD GitOps application deployment
+    - slug: bot-signup
+      description: Discord bot signup application
+    - slug: deployment
+      description: Application deployment and rollout work
+    - slug: kubernetes
+      description: Kubernetes and k3s platform resources
+    - slug: oauth
+      description: OAuth authentication and credential setup
 docTypes:
     - slug: design-doc
       description: Structured rationale and architecture notes

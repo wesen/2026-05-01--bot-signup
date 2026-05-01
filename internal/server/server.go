@@ -62,6 +62,7 @@ func (s *Server) RegisterRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("GET /auth/discord/login", s.handleDiscordLogin)
 	mux.HandleFunc("GET /auth/discord/callback", s.handleDiscordCallback)
 	mux.HandleFunc("POST /api/auth/logout", s.handleLogout)
+	mux.HandleFunc("GET /api/auth/session", s.handleSession)
 	mux.HandleFunc("GET /api/auth/me", s.SessionMiddleware(s.handleMe))
 
 	mux.HandleFunc("GET /api/profile", s.SessionMiddleware(s.handleGetProfile))
